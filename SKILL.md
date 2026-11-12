@@ -31,13 +31,17 @@ into fact.
       insufficient_credit (≥0.5 credits/video).` Billing: **wallet credits**
       (top up at platform.heygen.com; US$10 ≈ 20 credits).
   2. **MCP lane (alternative)** — everything below in this file: the remote
-      MCP server over OAuth, fully verified 2026-11-12 (DCR no-op, loopback
-      allowlist, bridge + extension + paste-URL card). Use when an install
-      must avoid API keys, or when PAVE's MCP bridge is the preferred surface.
-      Billing: plan credits.
+      MCP server over OAuth, fully verified 2026-11-12 end to end — login,
+      magic link, consent, plan pick, and token landing — driven by the
+      committed `tools/oauth-stepper.mjs` inside a hosted browser profile
+      (§9.4 lane 1). Works on hosted/headless PAVE with a single user paste
+      (the magic-link URL); the user's own browser is not needed at all. Use
+      when an install must avoid API keys, or when PAVE's MCP bridge is the
+      preferred surface. Billing: plan credits.
 - Doctrine-only skill: entrypoint is this file plus per-area doctrine under
-  `skills/`. No local code except the committed diagnostic probe and the
-  OAuth bridge/extension utilities (MCP-lane tools).
+  `skills/`. No local code except the committed diagnostic probe, the OAuth
+  stepper (hosted-browser lane driver, §9.4 lane 1), and the OAuth
+  bridge/extension utilities (MCP-lane tools).
 - The MCP token never enters a skill sandbox or process env: it is attached
   only inside the PAVE server's MCP connection manager. The probe reads it
   from `~/.pave/tokens.yaml` and never echoes it.
@@ -124,7 +128,8 @@ Discovery chain (all verified live 2026-11-12):
    HeyGen's documented restriction ("Remote MCP sign-in works only from
    supported agents") does not bite dynamically registered clients, but
    **a `PAVE_PUBLIC_BASE_URL` pointing at a public origin can never
-   validate** — hosted instances must use the bridge lane (§9.4).
+   validate** — hosted instances must use the hosted-browser stepper lane
+   (§9.4 lane 1).
    `[verified 2026-11-12 — sandbox session, full allowlist matrix]`
 6. Consent → authorization code → token exchange → Bearer access token
    (`expires_in: 864000` = 10 days) + refresh token + id_token. Scope
@@ -150,17 +155,59 @@ curl -s -X POST http://127.0.0.1:4096/capabilities/mcp/heygen/oauth/start \
   -H 'Content-Type: application/json' -d '{}'
 ```
 
-Returns an `authorizeUrl`; the user opens it anywhere, signs in, approves,
-and the redirect lands on PAVE's `/oauth/callback`. Tokens land as
-`MCP__heygen__ACCESS` / `MCP__heygen__REFRESH` in `~/.pave/tokens.yaml`.
+Returns an `authorizeUrl`; write it to `<oauth-dir>/authorize.url` (one line)
+for the stepper (§9.4 lane 1). Tokens land as `MCP__heygen__ACCESS` /
+`MCP__heygen__REFRESH` in `~/.pave/tokens.yaml`.
+
+**The `state` in the authorizeUrl dies fast — observed ~35 minutes.** A
+callback page reading `Connection Failed — Invalid or expired state token.
+Please try again.` means the state expired mid-flow; the consent must be
+redone against a fresh `oauth/start`. The banked browser login survives —
+re-run `oauth/start`, write the new `authorize.url`, and redo only the tail
+(`consent` / `finish`). `[verified 2026-11-12 — expired at ~35 min, tail redo
+succeeded with the same profile]`
+
+### Completing consent — hosted-browser stepper (primary, verified)
+
+The authorizeUrl must end in a browser that shares loopback with PAVE. On
+hosted/headless PAVE no user browser can — so host the browser yourself and
+drive it with `tools/oauth-stepper.mjs`. **This lane is verified end to end
+2026-11-12**: email form → magic link → consent → plan pick → callback
+`Connected! Connected heygen!` → tokens stored → 114 bridged tools →
+`get_current_user` live. Full runbook in §9.4 lane 1. Four findings the
+runbook encodes:
+
+1. **Headless Chromium is Turnstile-flagged.** Headless POST
+   `api2.heygen.com/v1/pacific/account/magic_link` → `403`; the page toasts
+   "Your request has been flagged for suspicious activity…" while the button
+   keeps showing "Sending…" — the email is silently never sent. Fix: full
+   Chromium **headed under `xvfb-run -a`**, normal Chrome UA,
+   `--disable-blink-features=AutomationControlled`, init script masking
+   `navigator.webdriver`. Turnstile then passes invisibly.
+   `[verified 2026-11-12 — 403 headless vs 200 headed, same profile]`
+2. **The magic link authenticates the requesting profile — it is not a
+   standalone session.** The emailed link (`app.heygen.com/magic-web/<token>`)
+   lands on a "Return to your original tab" page. Open the user-pasted URL
+   inside the same persistent profile, then re-navigate the authorizeUrl; the
+   consent screen appears there. `[verified 2026-11-12]`
+3. **A plan-picker interstitial sits between "Authorize access" and the
+   code.** HeyGen shows "Pick a plan for HeyGen MCP" (Free / Creator / Pro)
+   before issuing the authorization code. This is billing consent: **always
+   relay it to the user, never auto-pick.** The committed stepper enforces
+   this — `finish` clicks a plan only when the name is passed in.
+   `[verified 2026-11-12 — picker appeared, user chose Free]`
+4. **One paste per install is the entire user cost** — the magic-link URL.
+   Everything else is agent-driven in the hosted profile.
 
 ### Hosted-instance caveat
 
 The default `redirect_uri` is `http://127.0.0.1:<PAVE_PORT|4096>/oauth/callback`
-— a browser outside the container cannot reach it. Set `PAVE_PUBLIC_BASE_URL`
-in `settings.yaml` to an origin that routes to PAVE itself, or fall back to
-registering a DCR client against a redirect the user CAN reach and storing
-the result via the tokens route. (Same doctrine as openpave-dropbox-mcp §2.)
+— a browser outside the container cannot reach it, and because the shared
+client is RFC 8252 loopback-only (§2 step 5), **no public
+`PAVE_PUBLIC_BASE_URL` can ever validate.** The hosted-browser stepper lane
+(§9.4 lane 1) is the answer: the browser lives where PAVE lives, so loopback
+is native. The bridge and native-relay lanes (§9.4 lanes 2–3) remain for
+machines that cannot host a browser.
 
 ## 3. Tool surface — 114 tools, snapshot-verified
 
@@ -346,8 +393,9 @@ rules. `[verified 2026-11-12 — probe ran live: 114 tools + get_current_user]`
 
 ## 7. Open questions
 
-1. Does the R10 `permission`-tool enum trap reproduce on this bridge?
-   `[untested — dropbox coerced three calls 2026-11-06]`
+1. Does the R10 `permission`-tool enum trap reproduce on this bridge? **Closed
+   2026-11-12 — NO.** The grant landed correctly through the agent-surface
+   permission tool (M5 sandbox install, `evidence/VERIFICATION.md`).
 2. Does the bridge swallow error text like wrike's did? **Closed
    2026-11-12 — NO.** Errors arrive with full `message`/`error_code`/
    `next_steps` in `structuredContent` (§4.6).
@@ -361,7 +409,8 @@ rules. `[verified 2026-11-12 — probe ran live: 114 tools + get_current_user]`
 5. Does DCR work without a `redirect_uris` entry (no-redirect lane, for
    containers where the callback cannot reach PAVE)? **Moot 2026-11-12:** DCR
    is a no-op (§2 step 4) and the shared client is loopback-only (§2 step 5),
-   so there is no no-redirect lane at all — the bridge (§9.4) is the answer.
+   so there is no no-redirect lane at all — the hosted-browser stepper
+   (§9.4 lane 1) is the answer.
 
 ## 8. Troubleshooting
 
@@ -373,6 +422,11 @@ rules. `[verified 2026-11-12 — probe ran live: 114 tools + get_current_user]`
 | Bridged call fails with bare `isError` | Bridge swallowed the error text | Re-run via the probe (§5) and read the real message |
 | `plan_upgrade_required` | Feature not in account plan | Name the gap, offer plan-compatible alternative, wait for the user (§4.3) |
 | Tool in docs but `no such tool` from the probe | Doc drift | Trust `tools/list` (§3); report upstream |
+| `403` on `POST …/magic_link`, page toast "flagged for suspicious activity", button stuck on "Sending…" | Headless browser Turnstile-flagged; email never sent (§2) | Rerun the step with `HEADED=1 xvfb-run -a` (§9.4 lane 1) |
+| Magic-link email never arrives (no 403 either) | Resent after a consume, or a corporate gateway pre-fetched it | Check the NEWEST email only; one resend max (§9.4 lane 1 step 4) |
+| Callback page: "Invalid or expired state token" | `oauth/start` state died (~35 min) mid-flow | New `oauth/start` → rewrite `authorize.url` → redo only the tail (§2) |
+| Magic-link page: link already used / expired | Link is single-use, first browser wins | Newest email holds the live link; consuming a dead one auto-sends a replacement (§9.4 lane 1 step 4) |
+| Plan picker ("Pick a plan for HeyGen MCP") on screen | Normal interstitial before the code — billing consent | Relay to the user, never auto-pick (§2, §3.1) |
 
 Whatever the outcome: **never** run `capabilities_add` to recover — the
 repair verb is `capabilities_refresh heygen`.
@@ -407,58 +461,98 @@ capabilities_add https://mcp.heygen.com/mcp/v1
 Expect `status: error` — normal pre-auth. **Never run this command twice**
 (§1). The repair verb is `capabilities_refresh heygen`.
 
-### 9.3 OAuth lane
+### 9.3 OAuth lane — pick by where the user's browser is
 
 1. Back up `~/.pave/mcp/servers.json`, then set `heygen.auth.type = "oauth2"`.
-2. `POST /capabilities/mcp/heygen/oauth/start` (see §2 for the curl).
-3. Present the returned `authorizeUrl` per §9.5.
-4. The user signs in and approves; the redirect returns to PAVE's
-   `/oauth/callback`; tokens land in `~/.pave/tokens.yaml`.
-
-Works when the user's browser shares loopback with PAVE (same machine, or a
-port-forwarded container). Otherwise §9.4.
+2. `POST /capabilities/mcp/heygen/oauth/start` (see §2 for the curl); write
+   the returned `authorizeUrl` to `<oauth-dir>/authorize.url`.
+3. Finish consent in ONE of two places:
+   - **User's own browser, only if it shares loopback with PAVE** (same
+     machine, or a port-forwarded container): present the URL per §9.5; the
+     user signs in, approves, picks the plan, and the redirect lands on
+     PAVE's `/oauth/callback` natively.
+   - **Hosted browser driven by the agent (default for hosted/headless
+     PAVE — and it works locally too):** §9.4 lane 1, the stepper runbook.
+4. Tokens land in `~/.pave/tokens.yaml`.
 
 ### 9.4 Hosted / containerized instance — three lanes
 
 The user's browser cannot reach a container's `127.0.0.1:<port>/oauth/callback`
 — that is inherent. Three lanes, best first:
 
-**Hosted-browser lane (zero-paste; login bootstrap verified 2026-11-12).**
-Host a browser INSIDE the PAVE sandbox — its loopback IS PAVE, so the redirect
-completes natively and no user paste is involved at all. Verified end to end
-on this host: persistent HeyGen web login banked, live across browser
-restarts, screenshot-proofed.
+**Lane 1 — hosted-browser stepper (zero user browser; ONE paste of the magic
+link; consent leg verified 2026-11-12).** Host a browser INSIDE the PAVE
+sandbox — its loopback IS PAVE, so the redirect completes natively. Drive it
+with the committed `tools/oauth-stepper.mjs`. Verified end to end on this
+host 2026-11-12: `capabilities_add` → `pending_oauth` → stepper login +
+magic link + consent + plan pick → callback `Connected!` → tokens stored →
+`capabilities_status` installed → `get_current_user` live through the bridge.
 
-1. Install Playwright + full Chromium on the host (system deps via
-   passwordless sudo; `xauth` needed for `xvfb-run`). All artifacts in a
-   durable path outside wipe dirs — on this host `/home/pave/heygen-browser/`
-   (`~/.cache` and `~/.pave/cache` get wiped).
-2. **NEVER use `chrome-headless-shell` for HeyGen auth** — Cloudflare
-   Turnstile detects it and 403s the magic-link POST ("flagged for
-   suspicious activity"). Run **full Chromium headed under Xvfb**; Turnstile
-   passes invisibly. Canonical invocation on this host:
-   `cd /home/pave/heygen-browser && HEYGEN_HEADED=1 xvfb-run -a -s "-screen 0 1280x900x24" node driver.mjs status|sendlink|openlink '<url>'`
-   (driver.mjs `findExe()` prefers the full `chromium-1254/` binary).
-3. **Magic-link protocol — single-use rules, learned live:**
+1. **Install Playwright + full Chromium on the host** (system deps via
+   passwordless sudo; `xauth` is required by `xvfb-run`; local `npm install
+   playwright` in the oauth dir — a global npm install as root is refused).
+   Keep every artifact on a durable path outside wipe dirs (`~/.cache` and
+   `~/.pave/cache` get wiped); default `HEYGEN_OAUTH_DIR=~/heygen-oauth`.
+2. **NEVER run the browser headless for HeyGen auth** — Cloudflare Turnstile
+   403s the magic-link POST with a "flagged for suspicious activity" toast
+   while the button still says "Sending…" (email silently never sent). Every
+   stepper invocation is `HEADED=1 xvfb-run -a` — full Chromium headed,
+   normal Chrome UA, `--disable-blink-features=AutomationControlled`,
+   `navigator.webdriver` masked. Turnstile passes invisibly.
+   `[verified 2026-11-12]`
+3. **Runbook (each step dumps URL, visible fields/buttons, body text, and a
+   numbered screenshot):**
+
+   ```bash
+   cd <repo> && export HEYGEN_OAUTH_DIR=~/heygen-oauth   # holds authorize.url
+   HEADED=1 xvfb-run -a node tools/oauth-stepper.mjs form          # → "Use email" clicked
+   # …ask the user for the account email if unknown…
+   HEADED=1 xvfb-run -a node tools/oauth-stepper.mjs email '<addr>' # NET 200 …/magic_link
+   # …user opens the NEWEST email, right-click → "Copy link address", pastes it…
+   HEADED=1 xvfb-run -a node tools/oauth-stepper.mjs magiclink '<pasted-url>'
+   HEADED=1 xvfb-run -a node tools/oauth-stepper.mjs poll            # exit 7 = consent waiting
+   HEADED=1 xvfb-run -a node tools/oauth-stepper.mjs consent         # "Authorize access"
+   # …plan picker appears → ASK THE USER which plan (billing consent)…
+   HEADED=1 xvfb-run -a node tools/oauth-stepper.mjs finish 'continue with free'   # user's pick
+   ```
+
+   `finish` ends on the PAVE callback page — body `Connected! Connected
+   heygen! You can close this window.` means the code reached PAVE and the
+   exchange happened server-side. Verify: `capabilities_status heygen` →
+   `installed`, `token stored: true`; `mcp_heygen_get_current_user` returns
+   the account email + plan. `[verified 2026-11-12 — full sequence on this
+   host; account landed on plan free]`
+
+   The `code` step exists as an alternative to the magic link when the email
+   shows a 6-digit code and the user reads it out; `where` dumps the current
+   page without navigating (debug).
+4. **Magic-link protocol — single-use rules, learned live:**
    - **One send only.** Every `POST /v1/pacific/account/magic_link`
      invalidates all previously issued links. Multiple sends during
      debugging burned the user's first paste.
    - **Never click.** The link is single-use, first browser wins. User
      right-click → "Copy link address" in the NEWEST email and pastes it;
-     agent redeems via `driver.mjs openlink '<url>'` in the hosted profile.
+     the agent redeems it via the `magiclink` step in the hosted profile.
+   - The redeemed link lands on **"Return to your original tab"** — it
+     authenticates the requesting browser profile, not a standalone
+     session. Re-navigate the authorizeUrl (`poll` / `consent` does) to
+     reach the consent screen. `[verified 2026-11-12]`
    - Corporate email gateways may pre-fetch and burn links — if a fresh
      unclicked paste fails, resend once.
    - Hitting a consumed/expired link makes HeyGen auto-send a replacement;
      the newest email then holds the live link.
-4. Renewal (see §9.9): `capabilities_refresh heygen` first; if the refresh
-   lane fails, full consent inside the banked browser (`oauth/start` →
-   authorizeUrl in the profile browser → callback lands on PAVE). If the
-   browser session itself expired, re-bootstrap via magic link, then consent.
+5. **State expiry:** the `oauth/start` state dies in ~35 min (§2). Expired →
+   new `oauth/start`, rewrite `authorize.url`, redo only the tail. The
+   profile login survives.
+6. Renewal (see §9.9): `capabilities_refresh heygen` first; if the refresh
+   lane fails, full consent inside the banked profile (new `oauth/start` →
+   stepper `consent`/`finish`). If the browser session itself expired,
+   re-bootstrap via magic link (steps 3–4), then consent.
 
 Trust boundary: a logged-in profile on the box equals `tokens.yaml` — anyone
 with this PAVE instance has the HeyGen web session.
 
-**Bridge lane (one paste).** Run the committed bridge on the
+**Lane 2 — bridge (one paste).** Run the committed bridge on the
 machine where the user's browser runs:
 
 ```bash
@@ -486,7 +580,7 @@ capabilities_refresh heygen
 `[verified 2026-11-12 — bridge tested end to end on the laptop; tokens
 validated against the live MCP surface]`
 
-**Native relay lane (paste a URL).** If you instead used PAVE's own
+**Lane 3 — native relay (paste a URL).** If you instead used PAVE's own
 `oauth/start` (PAVE holds the verifier), the browser dies on the container's
 loopback — expected. The user copies the full address-bar URL; relay it
 verbatim into PAVE's own callback so PAVE does the exchange:
@@ -543,8 +637,10 @@ Delete every temp file that held a token or PKCE verifier. Keep
 Renewal ladder (verified plan 2026-11-12, first expiry ~2026-11-22):
 1. `capabilities_refresh heygen` (refresh-token lane, no browser, no user);
    check `GET /capabilities/mcp/heygen/oauth/result` for `connected:true`.
-2. Refresh failed → consent inside the banked browser (§9.4 step 4).
-3. Browser session dead → magic-link re-bootstrap (§9.4 step 3), then step 2.
+2. Refresh failed → consent inside the banked profile (§9.4 lane 1 step 6):
+   fresh `oauth/start` → `authorize.url` → stepper `consent`/`finish`.
+3. Browser session dead → magic-link re-bootstrap (§9.4 lane 1 steps 3–4),
+   then step 2.
 
 The access token lives 10 days. When it expires, a bridged call should
 refresh silently. If you see 401s: `capabilities_refresh heygen` once, then
