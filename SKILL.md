@@ -405,6 +405,10 @@ machine where the user's browser runs:
 node bridge/heygen-oauth-bridge.mjs        # listens on 127.0.0.1:49153, opens the browser
 ```
 
+Zero-dependency variant for machines without Node (double-click, no
+terminal): `bun build --compile bridge/heygen-oauth-bridge.mjs --outfile heygen-oauth-bridge.exe`
+(verified 2026-11-12, ~94 MB, self-contained).
+
 It generates its own PKCE pair, captures the redirect, performs the exchange
 itself, and renders the finished token JSON on a page with a copy button
 (the Google-Workspace "credential blob" pattern — HeyGen's own SPA renders
