@@ -90,3 +90,21 @@ M0–M6 all pass. Total spend US$0 of the US$10 budget.
   copy page — the manual paste-URL lane survives as the floor.
 - Firefox manifest provided (untested — no Firefox on the build machine);
   Safari path requires macOS/Xcode to package (code is Safari-compatible).
+
+---
+
+# HyperFrames MCP server — verified 2026-11-12
+
+- Separate MCP resource: `https://mcp.heygen.com/mcp/hyperframes/`
+  (`heygen-mcp-hyperframes` v1.30.0, 18 tools; snapshot
+  `schemas/snapshot-hyperframes-2026-11-12.json` committed)
+- **One OAuth token spans all mcp.heygen.com resources** — the v1-minted
+  Bearer authenticated hyperframes with no new consent (not audience-locked)
+- Tool families: compose/agentic project editing (`compose`,
+  `get_project_status`), renders (`render_video`,
+  `render_project_with_variables` — PAID, confirm first; status polls),
+  Claude-Design imports (`import-claude-design-from-url`,
+  `import-claude-motion-from-url`), projects CRUD, plus `internal_*`
+  widget/player/analytics tools that are HeyGen-internal — never call from PAVE
+- Was API-only (§11) when first documented; promoted onto the bridge
+  unannounced — the quarterly re-probe rule earned its keep same-day

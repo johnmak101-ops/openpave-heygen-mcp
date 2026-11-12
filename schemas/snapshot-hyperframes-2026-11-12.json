@@ -1,0 +1,1507 @@
+{
+  "tools": [
+    {
+      "name": "submit_feedback",
+      "title": "Submit feedback to HeyGen",
+      "description": "Submit concise product feedback to HeyGen after the user gives\nfeedback or you observe a meaningful terminal failure that did not recover. Set source=user\nonly for feedback the user actually expressed; use source=agent for your own observation.\nAlways include `toolName` and `resourceIds` when a project, session, video, or other\nresource exists for this issue — a report with no resource ID and no tool name is usually\nnot root-causable later. Include the exact observed error, but never credentials, raw media,\nunrelated conversation text, or an invented cause or user opinion. For usability or\nperformance complaints (e.g. \"too slow\", \"stuck\", \"hung\"), also include `pipelineStep`\n(which stage was slow — compose, magic_edit, render_video, or other) and `elapsedSeconds`\n(how long it actually took), and set `expectedBaseline` when the user states or implies\nwhat they expected (e.g. \"usually under 2 minutes\", \"faster in the web app\") — these turn a\nvague \"too slow\" into a diagnosable report. Do not report expected validation, consent, or\nbilling guidance unless the user says it is a problem. If you know the current host\napplication and surface, provide `reportedClientName` and `reportedClientSurface`;\notherwise omit them. Report the host, such as ChatGPT, Codex desktop, Codex CLI, Claude, or\nGrok, never the model name and never an inferred client. Submit once per issue and do not\nretry a failed feedback submission in a loop. Submission is best effort and does not confirm\ndurable storage or operator review. Do not automatically report historical failures found while browsing.\nFollow the client consent policy and briefly tell the user after submitting feedback.",
+      "inputSchema": {
+        "properties": {
+          "source": {
+            "description": "user only for the user's expressed feedback; agent for a failure observed during the current task.",
+            "enum": [
+              "user",
+              "agent"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "category": {
+            "description": "The kind of feedback being submitted.",
+            "enum": [
+              "failure",
+              "quality",
+              "usability",
+              "feature_request"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "summary": {
+            "description": "A concise account of the problem or request; omit secrets and unrelated conversation.",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "toolName": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact MCP tool name involved in this issue, when known.",
+            "title": "Toolname"
+          },
+          "resourceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Known project, session, video or job IDs; never invent identifiers.",
+            "title": "Resourceids"
+          },
+          "observedError": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The error actually returned by HeyGen, with secrets removed.",
+            "title": "Observederror"
+          },
+          "recoveryAttempts": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 500,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Safe recovery steps already attempted; do not recreate paid work.",
+            "title": "Recoveryattempts"
+          },
+          "reportedClientName": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Known host application name, not the model name.",
+            "title": "Reportedclientname"
+          },
+          "reportedClientSurface": {
+            "default": "unknown",
+            "description": "Known host surface; use unknown when unavailable.",
+            "enum": [
+              "web",
+              "desktop",
+              "cli",
+              "ide",
+              "unknown"
+            ],
+            "title": "Reportedclientsurface",
+            "type": "string"
+          },
+          "elapsedSeconds": {
+            "anyOf": [
+              {
+                "ge": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Measured elapsed time in seconds, when known.",
+            "title": "Elapsedseconds"
+          },
+          "pipelineStep": {
+            "anyOf": [
+              {
+                "enum": [
+                  "compose",
+                  "magic_edit",
+                  "render_video",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "HyperFrames stage when applicable; use other for Core/Apps and identify the operation in toolName.",
+            "title": "Pipelinestep"
+          },
+          "expectedBaseline": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The performance or behavior the user expected, if known.",
+            "title": "Expectedbaseline"
+          }
+        },
+        "required": [
+          "source",
+          "category",
+          "summary"
+        ],
+        "title": "SubmitFeedbackInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "feedbackId": {
+            "title": "Feedbackid",
+            "type": "string"
+          },
+          "posthogQueued": {
+            "title": "Posthogqueued",
+            "type": "boolean"
+          },
+          "slackDelivered": {
+            "title": "Slackdelivered",
+            "type": "boolean"
+          },
+          "status": {
+            "const": "submitted_best_effort",
+            "default": "submitted_best_effort",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feedbackId",
+          "posthogQueued",
+          "slackDelivered"
+        ],
+        "title": "SubmitFeedbackResult",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "model"
+        ],
+        "ui": {
+          "visibility": [
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "internal_widget_event",
+      "title": "Report Widget Event",
+      "description": "Record that a HeyGen widget opened or how it handed the user's choice to the model. Called only by HeyGen widgets; the model must never call this tool.",
+      "inputSchema": {
+        "properties": {
+          "widget": {
+            "enum": [
+              "avatar-library",
+              "avatar-creator",
+              "avatar-looks",
+              "avatars",
+              "voice-chooser",
+              "asset-uploader",
+              "video-library",
+              "video-player",
+              "audio-player",
+              "subscription-cancel",
+              "video-agent-v2",
+              "hyperframes-player",
+              "hyperframes-render-progress"
+            ],
+            "title": "Widget",
+            "type": "string"
+          },
+          "event": {
+            "enum": [
+              "opened",
+              "handoff",
+              "tab_switch",
+              "upload_fallback",
+              "upload_transfer_failed"
+            ],
+            "title": "Event",
+            "type": "string"
+          },
+          "handoffPath": {
+            "anyOf": [
+              {
+                "enum": [
+                  "model_context",
+                  "inline",
+                  "skipped",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Handoffpath"
+          },
+          "failureReason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "model_context_error",
+                  "model_context_timeout",
+                  "message_declined",
+                  "message_error",
+                  "no_bridge"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Failurereason"
+          },
+          "hostName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The host's self-reported name.",
+            "title": "Hostname"
+          },
+          "hostVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The host's self-reported version.",
+            "title": "Hostversion"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "enum": [
+                  "web",
+                  "desktop",
+                  "mobile"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Platform"
+          },
+          "supportsModelContext": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Supportsmodelcontext"
+          },
+          "supportsMessage": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Supportsmessage"
+          },
+          "view": {
+            "anyOf": [
+              {
+                "enum": [
+                  "gallery",
+                  "pick",
+                  "looks",
+                  "look_ids",
+                  "create"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The avatars widget's view when the event happened.",
+            "title": "View"
+          },
+          "tab": {
+            "anyOf": [
+              {
+                "enum": [
+                  "describe",
+                  "templates"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The create-look card's tab the user switched to (tab_switch events).",
+            "title": "Tab"
+          },
+          "uploadPurpose": {
+            "anyOf": [
+              {
+                "enum": [
+                  "photo_avatar.photo",
+                  "instant_avatar.footage",
+                  "instant_avatar.consent",
+                  "instant_avatar.thumbnail",
+                  "voice_clone.source"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Uploadpurpose"
+          },
+          "fallbackReason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "create_failed",
+                  "put_failed",
+                  "complete_failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fallbackreason"
+          },
+          "uploadMode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "staged",
+                  "record",
+                  "enforce",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Uploadmode"
+          },
+          "transferStatus": {
+            "anyOf": [
+              {
+                "maximum": 599,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The failed PUT's HTTP status, 0 when no response came back (CORS or network).",
+            "title": "Transferstatus"
+          },
+          "transferScope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "part",
+                  "upload"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "part: one failed part attempt; upload: the whole transfer failed.",
+            "title": "Transferscope"
+          }
+        },
+        "required": [
+          "widget",
+          "event"
+        ],
+        "title": "InternalWidgetEventInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "openai/widgetAccessible": true,
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "app"
+        ],
+        "ui": {
+          "visibility": [
+            "app"
+          ]
+        }
+      }
+    },
+    {
+      "name": "compose",
+      "title": "Compose HyperFrames Video",
+      "description": "\nAuthor or edit a HyperFrames video project. The HyperFrames agent handles captions, blocks, layout,\nasset attachment, transitions, color, and timing internally based on the natural-language prompt.\n\n### WHEN TO CALL:\n- The user asks to create, change, or refine a HyperFrames video project.\n- The user provides a specific topic, narrative, edit instruction, or style direction.\n\n### NEVER CALL WHEN:\n- The request is vague or doesn't describe what the project should be or change to. Stay in chat\n  and help the user clarify their intent before calling this tool.\n\n### PROJECT LIFECYCLE:\n- First call (new project): Leave project_id empty. A new HyperFrames project will be created\n  and the prompt will be applied as the initial authoring instruction.\n- Subsequent calls (editing): Pass the project_id returned from the previous tool call. The prompt\n  is interpreted as an edit applied to the existing project.\n\n### RETURN VALUE:\nThis tool returns immediately while the project runs in the background (typically a few minutes). The\nresponse indicates the run has *started*, not that the video is ready — at this point the project is\nin progress, not done. Compose renders the MP4 automatically as part of the run, so no separate render\nstep is needed; the downloadable MP4 will be available once the project completes.\n\n### MEDIA (user-supplied images and video):\n- The agent runs in the cloud and does not download, re-host or process files the prompt links to. A scene\n  can show a user-supplied image or a muted video clip only by using its direct, publicly-fetchable absolute\n  https:// file URL (or the URL of an uploaded HeyGen asset) as-is, so the prompt links the file itself.\n- Share-page links (Google Drive, Dropbox, YouTube, ...) are viewer pages, not media files, and never render.\n  Compose does not edit the user's own footage: it cannot trim, cut or transcribe a linked video.\n- Audio files linked in the prompt are not used: narration and music come from the agent's own audio pipeline.\n- A file that only exists on the user's machine — a local path such as /root/.claude/uploads/... (where chat\n  attachments land), C:\\Users\\... or ~/Downloads/..., or a bare filename like \"IMG_1234.mov\" — is not\n  reachable. Upload it first with the asset upload tools (`create_asset_upload`, PUT the bytes to the returned\n  upload_url, then `complete_asset_upload`) and pass the returned asset `url` in the prompt.\n- Inaccessible required media causes generation to fail; it is not silently removed or replaced.\n\n### INPUTS:\n- prompt: (Required) The user's instruction describing what the project should be or how it should change.\n  A length stated in the prompt (e.g. \"a 1-minute explainer\") sets the video's target duration.\n  Videos are planned at up to 90 seconds; a request for a longer video is built at 90 seconds. If the spoken\n  narration still runs longer after one shortened re-plan, the reply states the actual length.\n- project_id: (Optional) Project ID from a previous tool call to continue editing the same project.\n- design_source: (Optional) Brand style preset for the HyperFrames agent — file stem of a specimen\n  under the agent's design set. On a NEW project, omitting it defaults to one of the vetted house\n  styles (`claude`, `blockframe`, or `monochrome`, chosen per new project) so the output lands on a\n  coherent branded look. On a follow-up edit (when `project_id` is set), omitting it leaves the\n  project's existing style untouched — only pass a value on an edit to deliberately reskin. Pass a\n  value when (a) the user names a style explicitly (\"use blockframe\", \"make it monochrome\"), or\n  (b) a new project's content has a clear register mismatch with the default and one of the presets\n  is obviously the right vibe. Unknown values are tolerated — the agent falls back to inventing — so\n  this is a free-form string, not a fixed enum.\n\n  Known presets and when to pick each:\n  - `blockframe` — neo-brutalist pop-zine. Cream canvas, thick black borders, hard drop-shadows,\n    bright accent blocks (pink/yellow/green), Anton + Inter + DM Mono. Picks: energetic consumer\n    content — product launches, fashion / music drops, hand-stamped marketing, anything loud and\n    playful.\n  - `claude` — warm editorial paper-and-ink. Cream paper, warm charcoal ink, single clay accent,\n    Newsreader serif display + Hanken Grotesk body. Calm, literary, soft edges, no hard shadows.\n    Picks: Claude / Anthropic-branded work, thoughtful product narratives, essays, anything where\n    \"calm and literary\" beats \"loud.\"\n  - `mat` — material-tactile portfolio. Deep forest-green canvas with a wood-brown atmospheric\n    glow, single burnt-copper accent, Bricolage Grotesque display + DM Sans body, no shadows /\n    no rounded corners. Picks: industrial design, hardware reveals, premium-product launches,\n    anything that should feel tactile and crafted.\n  - `monochrome` — black-ink-on-cream scholarly monograph. Warm off-yellow cream paper, dark\n    olive-black ink, NO chromatic accent, ultra-light Jost + Lora italic + JetBrains Mono.\n    Generous whitespace, hairline rules. Picks: whitepapers, research notes, year-in-review\n    essays, anything that should read as serious long-form rather than a slide deck.\n  - `signal` — sober editorial briefing. Deep editorial-navy + warm aged-cream dual surface, one\n    restrained antique-gold accent (rules / italics / numerals), Source Serif 4 + DM Sans + IBM\n    Plex Mono. Picks: analyst reports, policy / finance / intelligence briefings, anything in\n    The-Economist or private-intelligence-memo register.\n",
+      "inputSchema": {
+        "properties": {
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Projectid"
+          },
+          "designSource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Designsource"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "ComposeInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/outputTemplate": "ui://widget/hyperframes-player.html",
+        "openai/toolInvocation/invoking": "Composing your HyperFrames video...",
+        "openai/toolInvocation/invoked": "Project started",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/resourceUri": "ui://widget/hyperframes-player.html",
+        "ui/visibility": [
+          "app",
+          "model"
+        ],
+        "ui": {
+          "resourceUri": "ui://widget/hyperframes-player.html",
+          "visibility": [
+            "app",
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "get_hyperframes_render",
+      "title": "Check HyperFrames Render",
+      "description": "\nCheck a render started by `render_project_with_variables`. Returns the status (queued, rendering, completed or failed) and,\nonce completed, the download link to give the user in the reply. Check again after the returned wait while it is still in\nprogress, and only when the user asks about it. Renders started by `render_video` are checked with `get_render_status`.\n\n### Input\n- render_id: (Required) The render_id returned by `render_project_with_variables`.\n",
+      "inputSchema": {
+        "properties": {
+          "renderId": {
+            "title": "Renderid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "renderId"
+        ],
+        "title": "GetHyperframesRenderInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/toolInvocation/invoking": "Checking the render...",
+        "openai/toolInvocation/invoked": "Render status retrieved",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "model"
+        ],
+        "ui": {
+          "visibility": [
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "internal_get_project_status",
+      "title": "Get HyperFrames Project State",
+      "description": "\nRead the current state of a HyperFrames project: whether the agent is still working,\nwaiting for the user's input, idle and ready to render, or has failed. Returns the\nsession-level status, the most recent message from the agent, and a paginated chat history.\n\n### WHEN TO CALL:\n- The user explicitly asks \"is it done?\" / \"what's happening?\" / \"what did the agent ask?\".\n- To confirm the compose run (which renders the MP4 automatically) has finished and the\n  downloadable video is ready, rather than assuming completion the moment compose returns.\n\n### NEVER CALL WHEN:\n- The user hasn't asked — the project canvas widget already tracks state live.\n\n### POLLING CADENCE:\nThis tool performs server-side long polling on first-page calls (no cursor): it waits up\nto 20 seconds for the compose run to leave an in-progress state before returning. When\nthe run is still in progress after that wait, the response includes\n`retry_after_seconds=15` indicates how long to wait before calling again; polling faster\nthan that has no effect. If `session_status` hasn't changed after ~5 minutes of polling,\na reasonable next step is to ask the user whether to keep waiting or move on.\n\n### SESSION_STATUS VALUES:\n- `processing` / `pending`: agent is still working; the next poll comes after the wait.\n- `waiting`: agent is asking the user something — `latest_agent_message` holds the\n  question, and the user's answer is passed to a follow-up `compose` call.\n- `draft` / `completed`: project is idle and the MP4 render (kicked off automatically by\n  compose) is done. When the CDN preview URL is available, it is returned inline in\n  `widget_data` — no `get_project` call needed. When `widget_data` is absent (preview not\n  yet generated), `get_project` fetches the result for display; a follow-up `compose` call\n  is the next step for further edits.\n- `error` / `failed`: project failed. The tool's text output is a generic, user-safe message\n  and is what reaches the user. `latest_agent_message` carries the raw internal failure reason\n  and is diagnostic-only (it can contain internal pipeline detail), not for user display.\n- `deleted`: project no longer exists.\n\n### INPUTS:\n- project_id: (Required) The project ID returned by `compose`.\n- limit: (Optional, default 10, range 1-100) Page size for the chat history.\n- cursor: (Optional) Opaque cursor returned as `next_cursor` in a prior call. Omit on\n  the first call to fetch the most recent page.\n\n### OUTPUT:\n- session_status: see values above.\n- latest_agent_message: most recent role=model message (TEXT / ERROR_MESSAGE / PAYWALL).\n  When `session_status=waiting` and the latest message isn't on the most recent page, the\n  tool automatically peeks one page further back to find it. Null when no such message\n  exists in the polled window. On `error`/`failed` this is the raw internal failure reason\n  and is diagnostic-only; the user-facing message is the tool's generic text output, not this field.\n- latest_agent_message_chat_type: chat_type of `latest_agent_message`. Always one of\n  `text`, `error_message`, or `paywall`, or null. Internal types (`reasoning`, `tool_update`,\n  `suggestions`, `generated_resources`) are filtered out here; see `messages[].chat_type`\n  for the unfiltered chatter.\n- latest_run_status: most recent run status from any message in the page.\n- messages: the page (oldest within page first, newest last).\n- next_cursor: paginate further back through history; null when exhausted.\n",
+      "inputSchema": {
+        "properties": {
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          },
+          "limit": {
+            "default": 10,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "poll": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Poll"
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "title": "InternalGetProjectStatusInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/outputTemplate": "ui://widget/hyperframes-player.html",
+        "openai/widgetAccessible": true,
+        "openai/toolInvocation/invoking": "Checking project state...",
+        "openai/toolInvocation/invoked": "Project state retrieved",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/resourceUri": "ui://widget/hyperframes-player.html",
+        "ui/visibility": [
+          "app"
+        ],
+        "ui": {
+          "resourceUri": "ui://widget/hyperframes-player.html",
+          "visibility": [
+            "app"
+          ]
+        }
+      }
+    },
+    {
+      "name": "get_project_status",
+      "title": "Check HyperFrames Project Status",
+      "description": "\nRead the current state of a HyperFrames project: whether the agent is still working,\nwaiting for the user's input, idle and ready to render, or has failed. Returns the\nsession-level status, the most recent message from the agent, and a paginated chat history.\n\n### WHEN TO CALL:\n- The user explicitly asks \"is it done?\" / \"what's happening?\" / \"what did the agent ask?\".\n- To confirm the compose run (which renders the MP4 automatically) has finished and the\n  downloadable video is ready, rather than assuming completion the moment compose returns.\n\n### NEVER CALL WHEN:\n- The user hasn't asked — the project canvas widget already tracks state live.\n\n### POLLING CADENCE:\nThis tool performs server-side long polling on first-page calls (no cursor): it waits up\nto 20 seconds for the compose run to leave an in-progress state before returning. When\nthe run is still in progress after that wait, the response includes\n`retry_after_seconds=15` indicates how long to wait before calling again; polling faster\nthan that has no effect. If `session_status` hasn't changed after ~5 minutes of polling,\na reasonable next step is to ask the user whether to keep waiting or move on.\n\n### SESSION_STATUS VALUES:\n- `processing` / `pending`: agent is still working; the next poll comes after the wait.\n- `waiting`: agent is asking the user something — `latest_agent_message` holds the\n  question, and the user's answer is passed to a follow-up `compose` call.\n- `draft` / `completed`: project is idle and the MP4 render (kicked off automatically by\n  compose) is done. When the CDN preview URL is available, it is returned inline in\n  `widget_data` — no `get_project` call needed. When `widget_data` is absent (preview not\n  yet generated), `get_project` fetches the result for display; a follow-up `compose` call\n  is the next step for further edits.\n- `error` / `failed`: project failed. The tool's text output is a generic, user-safe message\n  and is what reaches the user. `latest_agent_message` carries the raw internal failure reason\n  and is diagnostic-only (it can contain internal pipeline detail), not for user display.\n- `deleted`: project no longer exists.\n\n### INPUTS:\n- project_id: (Required) The project ID returned by `compose`.\n- limit: (Optional, default 10, range 1-100) Page size for the chat history.\n- cursor: (Optional) Opaque cursor returned as `next_cursor` in a prior call. Omit on\n  the first call to fetch the most recent page.\n\n### OUTPUT:\n- session_status: see values above.\n- latest_agent_message: most recent role=model message (TEXT / ERROR_MESSAGE / PAYWALL).\n  When `session_status=waiting` and the latest message isn't on the most recent page, the\n  tool automatically peeks one page further back to find it. Null when no such message\n  exists in the polled window. On `error`/`failed` this is the raw internal failure reason\n  and is diagnostic-only; the user-facing message is the tool's generic text output, not this field.\n- latest_agent_message_chat_type: chat_type of `latest_agent_message`. Always one of\n  `text`, `error_message`, or `paywall`, or null. Internal types (`reasoning`, `tool_update`,\n  `suggestions`, `generated_resources`) are filtered out here; see `messages[].chat_type`\n  for the unfiltered chatter.\n- latest_run_status: most recent run status from any message in the page.\n- messages: the page (oldest within page first, newest last).\n- next_cursor: paginate further back through history; null when exhausted.\n",
+      "inputSchema": {
+        "properties": {
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          },
+          "limit": {
+            "default": 10,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "title": "GetProjectStatusInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/toolInvocation/invoking": "Checking project status...",
+        "openai/toolInvocation/invoked": "Project status retrieved",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "model"
+        ],
+        "ui": {
+          "visibility": [
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "internal_get_render_status",
+      "title": "Get HyperFrames Render Status",
+      "description": "\nCheck the render status of a HyperFrames video that was previously submitted via `render_video`,\nand — when the render is complete — retrieve the presigned MP4 download URL.\n\nNOTE: Automatic polling for progress is unnecessary — the render-progress widget that appears in\nthe chat self-polls and shows the finished video on its own. This tool is the path for an explicit\nuser (or upstream-agent) request for the download link, the MP4 URL, the file, or to\nshare/send/provide/read out the video: it returns the `video_url` to surface directly in the reply.\nThe widget is a convenience, not a substitute for the link the user asked for, so in that case the\nURL belongs in the reply itself — do not redirect the user to the widget.\n\n### WHEN TO CALL:\n- The user explicitly asks \"is my video ready?\" / \"what's the status of my render?\"\n- The user explicitly asks for the download link, the MP4 URL, or to share/send the video.\n- An upstream agent prompt instructs you to provide the user with the download link for a\n  finished render — call this tool, then surface the `video_url` in your text reply.\n- The user wants to check on a render from a previous conversation.\n\n### POLLING CADENCE:\nWhen the render is still in progress, the response includes `retry_after_seconds=30` —\nwait that long before calling again if the user asks you to keep checking. Do not poll\nfaster than `retry_after_seconds` indicates; one poll per minute is plenty.\n\n### INPUTS:\n- project_id: (Required) The project ID the render belongs to.\n- video_id: (Required) The video_id returned by `render_video`.\n\n### OUTPUT:\n- render_status: One of pending / rendering / completed / failed (terminology may vary).\n- video_url: Presigned MP4 download URL — populated once the render completes. Present\n  this to the user as a download link so they can save the video file. Use the URL\n  exactly as returned (the query params are required signing params).\n",
+      "inputSchema": {
+        "properties": {
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          },
+          "videoId": {
+            "title": "Videoid",
+            "type": "string"
+          },
+          "poll": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Poll"
+          }
+        },
+        "required": [
+          "projectId",
+          "videoId"
+        ],
+        "title": "InternalGetRenderStatusInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/outputTemplate": "ui://widget/hyperframes-render-progress.html",
+        "openai/widgetAccessible": true,
+        "openai/toolInvocation/invoking": "Checking render status...",
+        "openai/toolInvocation/invoked": "Render status retrieved",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/resourceUri": "ui://widget/hyperframes-render-progress.html",
+        "ui/visibility": [
+          "app"
+        ],
+        "ui": {
+          "resourceUri": "ui://widget/hyperframes-render-progress.html",
+          "visibility": [
+            "app"
+          ]
+        }
+      }
+    },
+    {
+      "name": "get_render_status",
+      "title": "Check HyperFrames Render Status",
+      "description": "\nCheck the render status of a HyperFrames video that was previously submitted via `render_video`,\nand — when the render is complete — retrieve the presigned MP4 download URL.\n\nNOTE: Automatic polling for progress is unnecessary — the render-progress widget that appears in\nthe chat self-polls and shows the finished video on its own. This tool is the path for an explicit\nuser (or upstream-agent) request for the download link, the MP4 URL, the file, or to\nshare/send/provide/read out the video: it returns the `video_url` to surface directly in the reply.\nThe widget is a convenience, not a substitute for the link the user asked for, so in that case the\nURL belongs in the reply itself — do not redirect the user to the widget.\n\n### WHEN TO CALL:\n- The user explicitly asks \"is my video ready?\" / \"what's the status of my render?\"\n- The user explicitly asks for the download link, the MP4 URL, or to share/send the video.\n- An upstream agent prompt instructs you to provide the user with the download link for a\n  finished render — call this tool, then surface the `video_url` in your text reply.\n- The user wants to check on a render from a previous conversation.\n\n### POLLING CADENCE:\nWhen the render is still in progress, the response includes `retry_after_seconds=30` —\nwait that long before calling again if the user asks you to keep checking. Do not poll\nfaster than `retry_after_seconds` indicates; one poll per minute is plenty.\n\n### INPUTS:\n- project_id: (Required) The project ID the render belongs to.\n- video_id: (Required) The video_id returned by `render_video`.\n\n### OUTPUT:\n- render_status: One of pending / rendering / completed / failed (terminology may vary).\n- video_url: Presigned MP4 download URL — populated once the render completes. Present\n  this to the user as a download link so they can save the video file. Use the URL\n  exactly as returned (the query params are required signing params).\n",
+      "inputSchema": {
+        "properties": {
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          },
+          "videoId": {
+            "title": "Videoid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId",
+          "videoId"
+        ],
+        "title": "GetRenderStatusInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/toolInvocation/invoking": "Checking render status...",
+        "openai/toolInvocation/invoked": "Render status retrieved",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "model"
+        ],
+        "ui": {
+          "visibility": [
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "import-claude-design-from-url",
+      "title": "Import Claude Design",
+      "description": "Turn a Claude Design into a HeyGen HyperFrames video project. Author the design as a valid HyperFrames composition and send it as RAW, self-contained HTML (e.g. index.html), NOT a bundled/splash-loader artifact — the importer reads static HTML and cannot see a composition root that a bundle only assembles at runtime.\nCritical rules (author to these):\n- Root element carries data-composition-id, data-width + data-height (fixed-px canvas), data-start, data-duration.\n- Register every timeline on window.__timelines[compositionId].\n- Deterministic only: no Date.now()/Math.random(); any media autoplays muted.\n- Real motion (entrance animations + scene transitions), not a static page.\n- Preserve the source brand exactly (palette, fonts, copy, real assets); no stock/template substitution.\n- Fonts: inline every brand font as a base64 data: URI in an @font-face rule — a Google Fonts <link> is NOT sufficient (a linked font falls back to a system face and renders non-deterministically). Inlining the brand font is what preserves fidelity.\n- Every other asset must be resolvable: reference each image/video/audio as an inline data: URI OR a publicly-fetchable absolute URL — never a bare relative path (e.g. \"uploads/logo.png\") or a variable pointing at a local file (those arrive empty and render blank).\nFull guide (skeletons, timeline/shader contract, worked examples): before authoring, call the `get-send-to-hyperframes-guide` tool — it returns the guide as its result (no fetch/search needed). PREREQUISITE — the URL must be the one Claude Design's \"Send to\" hands over, on https://*.claudeusercontent.com. Any other host is rejected, so uploading the HTML to a file host or pasting a link you produced yourself will NOT work. Without such a URL this tool is not the right path: use `compose` to build the project from a description of the video instead. Given a valid Send-to URL it lints the composition and, if not yet renderable, returns the specific errors to fix and resubmit; on success it returns an openable link to the imported HyperFrames project.",
+      "inputSchema": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "ImportClaudeDesignFromUrlInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/outputTemplate": "ui://widget/hyperframes-player.html",
+        "openai/toolInvocation/invoking": "Importing your design into HyperFrames...",
+        "openai/toolInvocation/invoked": "Design imported",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/resourceUri": "ui://widget/hyperframes-player.html",
+        "ui/visibility": [
+          "app",
+          "model"
+        ],
+        "ui": {
+          "resourceUri": "ui://widget/hyperframes-player.html",
+          "visibility": [
+            "app",
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "get-design-import-job-status",
+      "title": "Get Design Import Status",
+      "description": "Get the status of a design import started by import-claude-design-from-url. Returns processing | done | failed, plus an openable link to the design when done.",
+      "inputSchema": {
+        "properties": {
+          "jobId": {
+            "title": "Jobid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "jobId"
+        ],
+        "title": "GetDesignImportJobStatusInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "openai/outputTemplate": "ui://widget/hyperframes-player.html",
+        "openai/toolInvocation/invoking": "Checking import status...",
+        "openai/toolInvocation/invoked": "Import status retrieved",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/resourceUri": "ui://widget/hyperframes-player.html",
+        "ui/visibility": [
+          "app",
+          "model"
+        ],
+        "ui": {
+          "resourceUri": "ui://widget/hyperframes-player.html",
+          "visibility": [
+            "app",
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "import-claude-motion-from-url",
+      "title": "Import Claude Motion video",
+      "description": "Import an MP4 video into HyperFrames Studio from a URL. HyperFrames Studio is HeyGen's desktop video editor. Call this from Claude Motion's Send to, with the arguments it provides.\n\nThe video becomes a new HyperFrames project, and the tool returns a link. Show that link to the user: it opens a page that launches the HyperFrames Studio desktop app, or offers to download it if it is not installed. In Studio they can trim the video, add titles, music and sound effects, and keep editing with AI.\n\nSending the same video again (same claude_design_project_id) updates the same link; opening it again adds a new copy of the project in Studio. The link works for 90 days after the last send.\n\nIf the tool returns an error, show its message to the user as is; it says what to do, such as sending again in a minute or reconnecting HyperFrames. Do not retry on your own.",
+      "inputSchema": {
+        "properties": {
+          "url": {
+            "description": "MP4 URL. Expires within 10 minutes. Fetch it server-side.",
+            "title": "Url",
+            "type": "string"
+          },
+          "download_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Access token for the video file, given separately from url. Pass it through unchanged; never extract one from url or alter url.",
+            "title": "Download Token"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Suggested title for the imported video.",
+            "title": "Title"
+          },
+          "claude_design_project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Stable identifier of the video; same on every re-send. Use it to update an existing import instead of creating a new one.",
+            "title": "Claude Design Project Id"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "ImportClaudeMotionFromUrlInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/toolInvocation/invoking": "Sending your video to HyperFrames...",
+        "openai/toolInvocation/invoked": "Video sent to HyperFrames",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "app",
+          "model"
+        ],
+        "ui": {
+          "visibility": [
+            "app",
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "internal_prepare_hyperframes_video_download",
+      "title": "Download HyperFrames Video",
+      "description": "Prepare a short-lived MP4 download URL only after an explicit Download click in the HyperFrames player. Never invoke on the user's behalf.",
+      "inputSchema": {
+        "properties": {
+          "projectId": {
+            "pattern": "^[A-Za-z0-9_-]{1,128}$",
+            "title": "Projectid",
+            "type": "string"
+          },
+          "videoId": {
+            "pattern": "^[A-Za-z0-9_-]{1,128}$",
+            "title": "Videoid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId",
+          "videoId"
+        ],
+        "title": "InternalPrepareHyperframesVideoDownloadInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "openai/widgetAccessible": true,
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "app"
+        ],
+        "ui": {
+          "visibility": [
+            "app"
+          ]
+        }
+      }
+    },
+    {
+      "name": "internal_track_hyperframes_player_event",
+      "title": "Track HyperFrames Player Event",
+      "description": "Record a HyperFrames player interaction for analytics. Called by the player widget only; never invoke on the user's behalf.",
+      "inputSchema": {
+        "properties": {
+          "projectId": {
+            "pattern": "^[A-Za-z0-9_-]{1,128}$",
+            "title": "Projectid",
+            "type": "string"
+          },
+          "event": {
+            "enum": [
+              "played",
+              "session_opened",
+              "download_clicked"
+            ],
+            "title": "Event",
+            "type": "string"
+          },
+          "runId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{1,128}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Runid"
+          }
+        },
+        "required": [
+          "projectId",
+          "event"
+        ],
+        "title": "InternalTrackHyperframesPlayerEventInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "openai/widgetAccessible": true,
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "app"
+        ],
+        "ui": {
+          "visibility": [
+            "app"
+          ]
+        }
+      }
+    },
+    {
+      "name": "list_projects",
+      "title": "List HyperFrames Projects",
+      "description": "\nList the user's HyperFrames video projects, newest first. Projects are\nthe videos the user has created in HeyGen via the HyperFrames connector — each\none represents an in-progress or finished video project.\n\n### WHEN TO CALL:\n- The user asks to see their videos, projects, drafts, or recent work\n  (\"show me my videos\", \"what projects do I have\", \"list my drafts\",\n  \"what have I been working on\").\n- You need to find a project_id before calling another HyperFrames tool\n  (`get_project`, `compose`, or `render_video`).\n- Paginating through a previous result via `next_cursor`.\n\n### NEVER CALL WHEN:\n- The user wants to author a new project — that's the `compose` tool.\n- The user already gave you a specific project_id — call `get_project`\n  directly.\n\n### INPUTS:\n- limit: (Optional, default 20, range 1-100) Page size.\n- cursor: (Optional) Opaque pagination cursor returned as `next_cursor` in a\n  prior `list_projects` response. Omit on the first call.\n\n### OUTPUT:\n- A list of ProjectRef entries (project_id, title, status, timestamps,\n  thumbnail/preview URLs) plus a `next_cursor` for further pagination. The\n  text response summarises the count and surfaces `next_cursor` so you can\n  decide whether to paginate.\n",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          }
+        },
+        "title": "ListProjectsInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "openai/toolInvocation/invoking": "Loading your projects...",
+        "openai/toolInvocation/invoked": "Projects loaded",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "model",
+          "app"
+        ],
+        "ui": {
+          "visibility": [
+            "model",
+            "app"
+          ]
+        }
+      }
+    },
+    {
+      "name": "get_project",
+      "title": "Get HyperFrames Project",
+      "description": "\nFetch a single HyperFrames video project by ID and render it inline using\nthe HyperFrames player widget. Returns the project metadata plus a player\nthat loads the current preview.\n\n### WHEN TO CALL:\n- The user asks to view, open, or play a specific project by ID or by\n  reference (\"show me project abc123\", \"open my latest project\",\n  \"play that video again\").\n- After `list_projects`, when the user picks one they want to look at.\n- After `compose` or `render_video` calls, to re-display the result.\n\n### NEVER CALL WHEN:\n- You don't have a project_id — call `list_projects` first.\n- The user wants to edit the project — that's the `compose` tool.\n\n### INPUTS:\n- project_id: (Required) Project ID. Must be a real ID owned by the\n  caller's HeyGen space; bogus IDs return a clear error.\n\n### OUTPUT:\n- A ProjectRef (project_id, title, status, timestamps, thumbnail/preview\n  URLs) and a `hyperframes-player` widget configured to play the project.\n  Both the thumbnail_url and the preview HTML are regenerated server-side at\n  request time, so re-calling this tool always returns fresh media.\n",
+      "inputSchema": {
+        "properties": {
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "title": "GetProjectInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "openai/outputTemplate": "ui://widget/hyperframes-player.html",
+        "openai/toolInvocation/invoking": "Loading project...",
+        "openai/toolInvocation/invoked": "Project loaded",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/resourceUri": "ui://widget/hyperframes-player.html",
+        "ui/visibility": [
+          "model",
+          "app"
+        ],
+        "ui": {
+          "resourceUri": "ui://widget/hyperframes-player.html",
+          "visibility": [
+            "model",
+            "app"
+          ]
+        }
+      }
+    },
+    {
+      "name": "render_project_with_variables",
+      "title": "Render HyperFrames Project With Variables",
+      "description": "\nRender a saved HyperFrames project .zip with this run's variable values swapped in, to a downloadable video. This is a\npaid action that starts a cloud render; it runs in the background and typically completes in a few minutes. Use it to render\none project many times with different values, for example one video per customer account.\n\n### Input\n- asset_id: (Required) The asset id of the project .zip, uploaded once to the caller's workspace with the HyperFrames CLI.\n  Getting a project into an asset is not done by this tool: ask the user for the asset id. A project that exists only as a\n  `render_video` project_id cannot be used here.\n- variables: (Required) An object of variable name to value. Names must match the variables the project declares: a name\n  the project does not declare is ignored today (no error, no effect), so check the spelling.\n  A value is text, a number, a color (text such as \"#ff8800\"), yes/no (true or false), a choice (one of the declared\n  options, as text), a font name (text), an image or media link (an https URL as text). Nested objects, lists and null are\n  not accepted.\n- composition: (Optional) The entry HTML file inside the zip. Defaults to index.html.\n- format: (Optional) mp4 (default), webm or mov.\n- title: (Optional) A label for the render.\n\n### Output\nA render_id. Call `get_hyperframes_render` with it for the status and the download link. The same request sent again\nwithin 24 hours returns the same render while it is queued, running or finished; if that render failed, calling again\nstarts a new one. The match is by workspace, so two members rendering the same project with the same values and title get one render.\n\n### When not to call\n- The user has not asked to render, or the asset id and the values are not known yet.\n",
+      "inputSchema": {
+        "properties": {
+          "assetId": {
+            "title": "Assetid",
+            "type": "string"
+          },
+          "variables": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "title": "Variables",
+            "type": "object"
+          },
+          "composition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Composition"
+          },
+          "format": {
+            "default": "mp4",
+            "enum": [
+              "mp4",
+              "webm",
+              "mov"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
+          }
+        },
+        "required": [
+          "assetId",
+          "variables"
+        ],
+        "title": "RenderProjectWithVariablesInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/toolInvocation/invoking": "Starting the HyperFrames render...",
+        "openai/toolInvocation/invoked": "Render started",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/visibility": [
+          "model"
+        ],
+        "ui": {
+          "visibility": [
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "render_video",
+      "title": "Render HyperFrames Video",
+      "description": "\nRender an existing HyperFrames project to a downloadable MP4 video. This is a paid\naction that kicks off a cloud render workflow; the render runs in the background and\ntypically completes in a few minutes. The render-progress widget displayed in the chat\nself-polls for completion and shows the finished video, so polling is not required just\nto learn when it finishes. When the user (or an upstream agent) explicitly asks for the\ndownload link/URL after the render has finished, `get_render_status` returns the\n`video_url` to surface directly in the reply. The widget is a convenience, not a\nsubstitute for the link — when the user has asked for the URL, the correct response is to\nprovide it; do not redirect the user to the widget in that case.\n\n### WHEN TO CALL:\n- The user explicitly asks to render, export, finalize, or download the video.\n- The user wants the final MP4 (not just a preview.)\n- The most recent `compose` run for this project has finished.\n\n### NEVER CALL WHEN:\n- The user is still iterating on the project. Use `compose` for further edits before rendering.\n- A project has not been created yet. Call `compose` first.\n- The user is just asking what the project looks like — they already see the inline preview.\n- A `compose` run is still in flight for this project (session status `waiting` or\n  `processing`). The render will be rejected. The project canvas widget in the chat\n  shows the agent's current state — if it indicates the agent is still working or\n  waiting for the user, wait for completion (or, if waiting, get the user's answer and\n  call `compose` again with it) before attempting to render.\n\n### INPUTS:\n- project_id: (Required) The project ID returned by `compose` (or a previous render call).\n",
+      "inputSchema": {
+        "properties": {
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "title": "RenderVideoInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "openai/outputTemplate": "ui://widget/hyperframes-render-progress.html",
+        "openai/toolInvocation/invoking": "Starting the HyperFrames render...",
+        "openai/toolInvocation/invoked": "Render started",
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ],
+        "ui/resourceUri": "ui://widget/hyperframes-render-progress.html",
+        "ui/visibility": [
+          "app",
+          "model"
+        ],
+        "ui": {
+          "resourceUri": "ui://widget/hyperframes-render-progress.html",
+          "visibility": [
+            "app",
+            "model"
+          ]
+        }
+      }
+    },
+    {
+      "name": "get-send-to-hyperframes-guide",
+      "title": "Get Send-to HyperFrames Guide",
+      "description": "\nReturns the full Claude Design \"Send to HyperFrames\" authoring guide as text: the composition\ncontract, worked skeletons/examples, timeline + shader-transition patterns, and the determinism\nand fidelity rules (inline base64 fonts, preserve brand substance, etc.).\n\n**Scope — only for the \"Send to HyperFrames\" authoring flow:** call this when you are authoring a\nClaude Design composition to import via `import-claude-design-from-url`. Do NOT call it for other\nHyperFrames work (compose, render, or editing an existing project) — it is not relevant there.\n\nWhen it IS applicable, **call it FIRST, before authoring** — read the returned guide and author to\nit, rather than guessing the contract from memory or web search. Takes no arguments; returns the\nguide text directly (no URL to fetch).\n",
+      "inputSchema": {
+        "properties": {},
+        "title": "GetSendToHyperframesGuideInput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ],
+        "ui/visibility": [
+          "model"
+        ],
+        "ui": {
+          "visibility": [
+            "model"
+          ]
+        }
+      }
+    }
+  ]
+}

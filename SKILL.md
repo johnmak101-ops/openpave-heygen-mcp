@@ -172,6 +172,21 @@ an `upload_asset` tool that does not exist (the bridge exposes
 `create_asset_upload` + `complete_asset_upload`), and `get_video_scenes`
 exists on the bridge despite docs implying scene editing is API-only.
 
+- **HeyGen runs a SECOND MCP server** at
+  `https://mcp.heygen.com/mcp/hyperframes/` (`heygen-mcp-hyperframes` v1.30.0,
+  18 tools, snapshot: `schemas/snapshot-hyperframes-2026-11-12.json`). It was
+  API-only when this doctrine was written; promoted onto the bridge
+  unannounced — a live example of §11's "re-check quarterly" rule.
+  `[verified 2026-11-12 — bare probe, initialize, tools/list]`
+- **One OAuth token covers every `mcp.heygen.com` resource.** The v1-minted
+  token authenticated the hyperframes resource without a new consent —
+  tokens are NOT audience-locked to the path that minted them.
+  `[verified 2026-11-12 — same Bearer succeeded on /mcp/hyperframes/]`
+  Local agents add each server with one command (`claude mcp add --transport
+  http heygen https://mcp.heygen.com/mcp/v1/`) and complete OAuth
+  zero-friction because the agent itself is the loopback receiver; remote
+  PAVE follows §9.
+
 Deep doctrine per product area lives in `skills/<area>/SKILL.md`:
 
 | Area (folder) | Tools |
@@ -515,7 +530,8 @@ HeyGen OAuth is DCR-native:
 These are API-only today. They are named so nobody burns time hunting; the
 doctrine deliberately documents no paths for them: proofread sessions,
 webhook endpoint management, streaming TTS (the WebSocket/HTTP stream —
-`create_speech` on the bridge is request/response only), hyperframes cloud
-rendering, Stripe project wallets. Re-check quarterly with the probe —
-HeyGen promotes tools onto the bridge without always updating the docs
-(§3). `[verified 2026-11-12 — absent from the 114-tool snapshot]`
+`create_speech` on the bridge is request/response only), Stripe project
+wallets. Re-check quarterly with the probe — HeyGen promotes tools onto the
+bridge without always updating the docs (§3): **hyperframes used to be on
+this list and moved to its own MCP server** (`/mcp/hyperframes/`, §3).
+`[verified 2026-11-12 — absent from the 114-tool snapshot]`
