@@ -101,15 +101,25 @@ Discovery chain (all verified live 2026-11-12):
    7591 DCR), PKCE `S256`, RFC 8707 resource indicators, `refresh_token`
    grant, public subjects, `token_endpoint_auth_method: none`.
 4. DCR with `redirect_uris: ["http://127.0.0.1:4096/oauth/callback"]`
-   (PAVE's default redirect) → **HTTP 201, client_id issued**. HeyGen's
-   documented restriction ("Remote MCP sign-in works only from supported
-   agents; others get `Invalid redirect_uri`") applies to pre-registered
-   third-party clients — **it does not block dynamically registered
-   clients.** `[verified 2026-11-12 — the exact PAVE-shaped DCR accepted]`
-5. Consent → authorization code → token exchange → Bearer access token
+   (PAVE's default redirect) → **HTTP 201** — but the 201 is a no-op:
+   HeyGen's registration endpoint always returns the **same shared client**
+   (`client_id` issued 2026-02-17, `client_name "HeyGen MCP Default"`),
+   echoing whatever `redirect_uris` you send without persisting them. There
+   is no per-installation client. `[verified 2026-11-12 — two registrations
+   hours apart returned the identical client_id; sandbox session re-confirmed
+   and oracle-checked via POST /v1/oauth/client/info]`
+5. That shared client is **RFC 8252 loopback-only**: `http://127.0.0.1:<any
+   port>/<any path>` and `http://localhost:*` validate; every https origin,
+   `0.0.0.0`, `host.docker.internal`, `[::1]` are rejected. Consequence:
+   HeyGen's documented restriction ("Remote MCP sign-in works only from
+   supported agents") does not bite dynamically registered clients, but
+   **a `PAVE_PUBLIC_BASE_URL` pointing at a public origin can never
+   validate** — hosted instances must use the bridge lane (§9.4).
+   `[verified 2026-11-12 — sandbox session, full allowlist matrix]`
+6. Consent → authorization code → token exchange → Bearer access token
    (`expires_in: 864000` = 10 days) + refresh token + id_token. Scope
    normalizes to `openid` regardless of what you request.
-6. Token verified against the live MCP surface: `initialize` OK
+7. Token verified against the live MCP surface: `initialize` OK
    (`heygen-mcp` v1.30.0), `tools/list` 114 tools, `get_current_user`
    returns the account email and plan.
 
@@ -324,8 +334,9 @@ rules. `[verified 2026-11-12 — probe ran live: 114 tools + get_current_user]`
    separately addressable skills is untested — until it is, address the
    whole playbook as `heygen-mcp`. `[untested]`
 5. Does DCR work without a `redirect_uris` entry (no-redirect lane, for
-   containers where the callback cannot reach PAVE)? Dropbox refuses it;
-   HeyGen's AS is a different implementation. `[untested]`
+   containers where the callback cannot reach PAVE)? **Moot 2026-11-12:** DCR
+   is a no-op (§2 step 4) and the shared client is loopback-only (§2 step 5),
+   so there is no no-redirect lane at all — the bridge (§9.4) is the answer.
 
 ## 8. Troubleshooting
 
@@ -379,12 +390,48 @@ Expect `status: error` — normal pre-auth. **Never run this command twice**
 4. The user signs in and approves; the redirect returns to PAVE's
    `/oauth/callback`; tokens land in `~/.pave/tokens.yaml`.
 
-### 9.4 Hosted instance
+Works when the user's browser shares loopback with PAVE (same machine, or a
+port-forwarded container). Otherwise §9.4.
 
-If the user's browser cannot reach `127.0.0.1:<port>/oauth/callback`, set
-`PAVE_PUBLIC_BASE_URL` to an origin that routes to PAVE itself before
-starting OAuth. If no such origin exists, open question §7.5 applies —
-stop and report rather than improvising a token hand-copy.
+### 9.4 Hosted / containerized instance — the bridge lane
+
+The user's browser cannot reach a container's `127.0.0.1:<port>/oauth/callback`
+— that is inherent. Two sub-lanes, newest first:
+
+**Bridge lane (one paste, recommended).** Run the committed bridge on the
+machine where the user's browser runs:
+
+```bash
+node bridge/heygen-oauth-bridge.mjs        # listens on 127.0.0.1:49153, opens the browser
+```
+
+It generates its own PKCE pair, captures the redirect, performs the exchange
+itself, and renders the finished token JSON on a page with a copy button
+(the Google-Workspace "credential blob" pattern — HeyGen's own SPA renders
+nothing usable). The user pastes that one JSON blob into the PAVE chat; the
+agent stores it via the sanctioned route and refreshes:
+
+```bash
+curl -X PUT http://127.0.0.1:4096/capabilities/mcp/heygen/tokens \
+  -H "x-pave-internal-token: $(cat ~/.pave/.internal-token)" \
+  -H "x-pave-internal-user: <owner email>" \
+  -H 'Content-Type: application/json' -d '<pasted blob>'
+capabilities_refresh heygen
+```
+
+`[verified 2026-11-12 — bridge tested end to end on the laptop; tokens
+validated against the live MCP surface]`
+
+**Native relay lane (paste a URL).** If you instead used PAVE's own
+`oauth/start` (PAVE holds the verifier), the browser dies on the container's
+loopback — expected. The user copies the full address-bar URL; relay it
+verbatim into PAVE's own callback so PAVE does the exchange:
+
+```bash
+curl -s "http://127.0.0.1:4096/oauth/callback?code=<CODE>&state=<STATE>"
+```
+
+Never hand-copy tokens into `tokens.yaml` outside these two routes (§2, R6).
 
 ### 9.5 Presenting the authorize URL — do not use a question card
 
