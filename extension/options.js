@@ -18,12 +18,20 @@ $('save').addEventListener('click', async () => {
     return;
   }
 
-  try {
-    await chrome.permissions.request({ origins: [origin + '/*'] });
-  } catch (e) {
-    status.textContent = 'Host permission for ' + origin + ' was not granted — relay fetches will fail.';
-  }
-
   await chrome.storage.local.set({ origin, token });
-  status.textContent = 'Saved. Relay target: ' + origin + '/api/mcp/oauth-relay';
+
+  let granted = false;
+  try {
+    granted = await chrome.permissions.request({ origins: [origin + '/*'] });
+  } catch (e) {
+    granted = false;
+  }
+  if (!granted) {
+    const loopback = /^(http:\/\/127\.0\.0\.1|http:\/\/localhost)/.test(origin);
+    status.textContent = loopback
+      ? 'Saved. Origin permission declined, but loopback dev targets are usually CORS-open — relay will try anyway.'
+      : 'Saved, but origin permission was declined — the relay will only work if ' + origin + ' allows cross-origin fetches (Access-Control-Allow-Origin).';
+  } else {
+    status.textContent = 'Saved. Relay target: ' + origin + '/api/mcp/oauth-relay';
+  }
 });
