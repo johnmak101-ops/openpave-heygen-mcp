@@ -1,0 +1,29 @@
+# OpenPAVE HeyGen MCP Skill
+# Doctrine skill for the remote HeyGen MCP server (mcp.heygen.com/mcp/v1)
+
+name: heygen-mcp
+version: 0.1.0
+description: Operate HeyGen through the remote MCP server (mcp.heygen.com/mcp/v1, bridged as mcp_heygen_* tools) - verified MCP-only doctrines for avatar, video, translate, voices, templates, brand kits, assets, batches, and account tools
+author:
+  name: johnmak101-ops
+  url: https://github.com/johnmak101-ops
+
+license: MIT
+homepage: https://github.com/johnmak101-ops/openpave-heygen-mcp
+repository: johnmak101-ops/openpave-heygen-mcp
+
+entrypoint: SKILL.md
+
+keywords:
+  - heygen
+  - mcp
+  - video
+  - avatar
+  - translation
+  - voice
+  - tts
+  - templates
+  - brand
+
+category: productivity
+icon: "\U0001F3AC"
