@@ -24,7 +24,7 @@ Desktop: token-exchange regression). Reinforces the 2026-11-12 pivot: API-key
 |---|---|---|
 | 1 | Token endpoint 307-redirect kills strict clients | **Excluded** — probed live: POST /v1/oauth/token answers 400 directly, no redirect (trailing-slash variant 404s) |
 | 2 | `resource` parameter (RFC 8707) required at exchange; client omits it | **EXCLUDED 2026-11-12** — live test: exchange WITHOUT `resource` returned HTTP 200 with a full token set. The parameter is accepted but not required. |
-| 3 | `redirect_uri` mismatch — client's exact redirect string differs from authorize step (e.g. trailing slash, port) | Plausible; HeyGen validated the literal string at authorize time (shared client + oracle-verified allowlist) |
+| 3 | `redirect_uri` mismatch — client's exact redirect string differs from authorize step (e.g. trailing slash, port) | **CONFIRMED as live server behaviour 2026-11-12** — exchange with a mismatched port (`49996` vs authorized `49997`) returned `400 invalid_grant "Invalid 'redirect_uri' in request."`. HeyGen exact-matches the literal string. If Claude Desktop replays anything but the byte-identical redirect_uri, the exchange fails with exactly this — matching #284's symptom (callback OK, exchange fails, generic client error). **Leading hypothesis.** Client-side confirmation requires Anthropic to log the exchange request body. |
 | 4 | Client sends JSON body instead of form-encoded | Untested; endpoint speaks form-encoded OAuth standard |
 | 5 | Returned scope normalization (`openid` regardless of request) trips strict scope validation in the client | Weak but cheap to rule out |
 | 6 | Fixed in later Claude Desktop builds (issue is 6 months old) | Check current build before deeper work |
