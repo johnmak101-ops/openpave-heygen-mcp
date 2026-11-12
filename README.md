@@ -44,7 +44,23 @@ This skill never documents API keys, REST endpoints, or the `heygen` CLI. Everyt
 
 ## Verification status
 
-Every doctrine claim carries a tag: `[verified <date>]` (tested live), `[bridge snapshot <date>]` (from a live `tools/list` schema dump), or `[unverified]` (from upstream docs, not yet reproduced). Live surface verified 2026-11-12: **114 tools** on `heygen-mcp` v1.30.0 — upstream docs claim ~88; trust the probe, not the docs.
+Every doctrine claim carries a tag: `[verified <date>]` (tested live), `[bridge snapshot <date>]` (from a live `tools/list` schema dump), or `[unverified]` (from upstream docs, not yet reproduced). Live surface verified 2026-11-12: **114 tools** on `heygen-mcp` v1.30.0 — upstream docs claim ~88; trust the probe, not the docs. The running ledger is `evidence/VERIFICATION.md`.
+
+## Maintenance
+
+Quarterly (or when the bridge behaves oddly):
+
+```bash
+node probe/heygen-probe.mjs tools/list > /tmp/tools-now.txt          # count tools
+diff <(node -e "const s=require('./schemas/snapshot-2026-11-12.json');console.log(s.tools.map(t=>t.name).sort().join('\n'))") \
+     <(grep '^- ' /tmp/tools-now.txt | sed 's/^- \([^:]*\):.*/\1/' | sort)   # what changed
+```
+
+New tools → write doctrine for them before use. Missing tools → check
+[HeyGen's changelog](https://developers.heygen.com/changelog.md) and the
+[official skills repo](https://github.com/heygen-com/skills) for intent
+before assuming removal. Also watch that repo's releases — its skills are the
+upstream wedge this playbook ports.
 
 ## License
 
