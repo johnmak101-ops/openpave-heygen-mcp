@@ -108,3 +108,16 @@ M0–M6 all pass. Total spend US$0 of the US$10 budget.
   widget/player/analytics tools that are HeyGen-internal — never call from PAVE
 - Was API-only (§11) when first documented; promoted onto the bridge
   unannounced — the quarterly re-probe rule earned its keep same-day
+
+---
+
+# browser:handoff scope — tested and excluded (2026-11-12)
+
+The host-level PRM advertises a `browser:handoff` scope. Tested: authorize
+URL with `scope=openid profile email browser:handoff` → approval → identical
+loopback redirect, identical dead tab. No handoff page, no rendered code, no
+behaviour change. Conclusion: the scope serves HeyGen's own widget/player
+handoff (`internal_widget_event` class), NOT cloud-agent OAuth. Every
+hypothesis for a no-paste cloud path (device flow, hosted redirects,
+handoff scope) is now empirically closed; paste-back or API-key lanes are
+the complete answer set.
