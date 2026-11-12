@@ -2,7 +2,7 @@
 # Doctrine skill for the remote HeyGen MCP server (mcp.heygen.com/mcp/v1)
 
 name: heygen-mcp
-version: 0.2.0
+version: 0.2.1
 description: Operate HeyGen through the remote MCP server (mcp.heygen.com/mcp/v1, bridged as mcp_heygen_* tools) - verified MCP-only doctrines for avatar, video, translate, voices, templates, brand kits, assets, batches, and account tools
 author:
   name: johnmak101-ops

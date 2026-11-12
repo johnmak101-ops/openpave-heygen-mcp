@@ -130,7 +130,7 @@ the complete answer set.
   ("Welcome, John"), verified across a fresh browser process; screenshot
   proofs on the host.
 - Key finding: chrome-headless-shell is Turnstile-detected (403 on magic-link
-  POST); full Chromium headed under Xvfb passes invisibly. Canonical driver:
+  POST); full Chromium headed under Xvfb passed invisibly on that host (a later host rendered the widget interactively — see "Renewal-lane corrections" below). Canonical driver:
   driver.mjs status|sendlink|openlink via xvfb-run.
 - Magic-link single-use protocol learned live: one send only (resends
   invalidate), never click (first browser wins), corporate gateways may
@@ -176,10 +176,11 @@ john.mak@candrholdings.com / plan free. Total user cost: ONE paste.
 2. **Magic-link semantics.** The link authenticates the requesting browser
    profile — the redeemed page says "Return to your original tab". Re-navigate
    the authorizeUrl to reach consent; the link is not a standalone session.
-3. **State expiry ~35 min.** First consent attempt landed on `Connection
-   Failed — Invalid or expired state token.` after the oauth/start state
-   aged ~35 min. Re-ran oauth/start, rewrote authorize.url, redid only
-   consent+finish with the same profile → success.
+3. **State expiry ~35 min on this host.** First consent attempt landed on
+   `Connection Failed — Invalid or expired state token.` after the
+   oauth/start state aged ~35 min. Re-ran oauth/start, rewrote authorize.url,
+   redid only consent+finish with the same profile → success. A later host
+   measured ~13 min — see "Renewal-lane corrections" below.
 4. **Plan-picker interstitial = billing consent.** "Pick a plan for HeyGen
    MCP" (Free/Creator/Pro) appears after "Authorize access" and before the
    code. Always relay to the user; the committed `finish` step clicks a plan
@@ -187,3 +188,28 @@ john.mak@candrholdings.com / plan free. Total user cost: ONE paste.
 5. **npm global install as root is refused** on this host — local
    `npm install playwright` inside the oauth dir; `sudo npx playwright
    install-deps chromium` + `apt-get install xauth` (passwordless sudo).
+
+## Renewal-lane corrections — 2026-11-12 (reported; not re-run in this checkout)
+
+Source: board post from the renewal lane, plus the host-local helper
+`<oauth-dir>/turnstile.mjs`. Both items change doctrine; neither was
+reproduced here (no HeyGen session or headed browser in this workspace).
+
+1. **Turnstile is interactive on that host, not invisible.** The headed
+   stepper reached the email form but hung at "Sending…" with **no
+   `magic_link` POST** — no 403, no toast, no email. Root cause: the widget
+   iframe sits inside a shadow root, so page DOM queries never find it. Fix:
+   enumerate the frames, read the iframe's rect via `frameElement()` from
+   inside the frame, click the checkbox geometry. The fix lives at
+   `<oauth-dir>/turnstile.mjs` on that box (host-local; not in this repo).
+   The committed stepper now fails loudly (`NO_MAGIC_LINK_POST`, exit 10)
+   instead of finishing as if the email had been sent.
+2. **State lifetime ~13 min on that host, not ~35.** The first documented
+   observation was ~35 min (2026-11-12, earlier host). Corrected guidance:
+   run the consent tail as ONE `finish '<plan>'` immediately after
+   `oauth/start`; do not split consent → plan → finish.
+
+Doctrine updated: `SKILL.md` §2 (both findings + state), §8 table, §9.4
+lane 1 steps 2/5/6, §9.9; `tools/oauth-stepper.mjs` header and email-step
+detector; `orchestration/brief.template.md`; README lane summary. `[reported
+2026-11-12]`

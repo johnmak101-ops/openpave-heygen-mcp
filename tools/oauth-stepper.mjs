@@ -15,7 +15,13 @@
 //        HEADED=1 xvfb-run -a node tools/oauth-stepper.mjs <step> [arg]
 //    HEADED=1 launches full Chromium headed (under Xvfb) with a normal Chrome
 //    UA, --disable-blink-features=AutomationControlled, and an init script
-//    masking navigator.webdriver. Turnstile then passes invisibly.
+//    masking navigator.webdriver. That clears the headless check, but headed
+//    is not a guarantee: on some hosts the Turnstile widget is INTERACTIVE and
+//    the button sits at "Sending..." with NO POST firing at all. The widget
+//    iframe is inside a shadow root, so DOM selectors cannot reach it — solve
+//    it with the host-local helper (frameElement() geometry):
+//        HEADED=1 xvfb-run -a node "$HEYGEN_OAUTH_DIR/turnstile.mjs"
+//    then re-run the `email` step.
 //
 // 2. The plan picker ("Pick a plan for HeyGen MCP") is BILLING CONSENT. It
 //    appears after "Authorize access" and before the code is issued. The user
@@ -53,9 +59,11 @@
 //   where              dump current page state without navigating (debug)
 //
 // State expiry: if the callback page reads "Invalid or expired state token",
-// the oauth/start state (~35 min lifetime) died — re-run oauth/start, write
-// the new authorize.url, and redo only the tail (consent/finish). The banked
-// profile login survives; you do NOT redo the magic link.
+// the oauth/start state died (measured ~13 min on this host; ~35 on an earlier
+// one). Re-run oauth/start, write the new authorize.url, and run the tail as
+// ONE `finish '<plan>'` immediately — splitting consent/plan/finish across
+// invocations can outlive the state. The banked profile login survives; you do
+// NOT redo the magic link.
 
 import { chromium } from "playwright";
 import { readFileSync, writeFileSync } from "fs";
@@ -145,9 +153,11 @@ try {
     }
     const emailField = page.getByPlaceholder("Enter your email", { exact: true }).first();
     if (await emailField.count()) {
+      let sawMagicLinkPost = false;
       page.on("response", (r) => {
         const u = r.url();
         if (/magic|email|login|otp|code|auth/i.test(u) && !/\.(js|css|png|svg|woff)/.test(u)) {
+          if (/magic_link/i.test(u)) sawMagicLinkPost = true;
           console.log(`NET ${r.status()} ${r.request().method()} ${u.slice(0, 120)}`);
         }
       });
@@ -162,6 +172,13 @@ try {
       }
       await page.getByRole("button", { name: /send a secure magic link/i }).first().click();
       await page.waitForTimeout(12000);
+      if (!sawMagicLinkPost) {
+        console.log(
+          "NO_MAGIC_LINK_POST — Turnstile is probably unsolved (interactive widget in a shadow root).\n" +
+            `Run: HEADED=1 xvfb-run -a node "${join(DIR, "turnstile.mjs")}"  then retry the email step.`
+        );
+        process.exitCode = 10;
+      }
     }
     await dump();
   } else if (step === "code") {
