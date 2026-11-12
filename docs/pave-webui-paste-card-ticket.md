@@ -1,76 +1,62 @@
-# Ticket — PAVE WebUI: OAuth paste-URL card for loopback-only MCP providers
+# Ticket — PAVE WebUI: connect HeyGen via API-key paste card (primary lane)
 
-**Type:** Feature request · **Component:** WebUI (Settings → MCP servers) · **Priority:** Medium — unblocks every remote/sandboxed PAVE install of a loopback-only MCP provider (HeyGen today; verified 2026-11-12)
+**Type:** Feature request · **Component:** WebUI (Settings → Integrations) · **Priority:** High — simplest possible connect UX for HeyGen; verified feasible 2026-11-12
 
 ## Problem
 
-HeyGen's Remote MCP (`https://mcp.heygen.com/mcp/v1`) accepts **loopback
-redirect URIs only** (`http://127.0.0.1:<port>/<path>`, `http://localhost:*`
-— allowlist verified against the live AS). Containerised/remote PAVE cannot
-receive the OAuth callback: the browser's loopback lands on the user's own
-machine, where the tab dies with `ERR_CONNECTION_REFUSED`.
+HeyGen supports two integration surfaces:
 
-Today the only completion path is an agent-run ritual: the user copies the
-dead tab's address-bar URL and pastes it into the PAVE chat; the agent relays
-it into PAVE's own `/oauth/callback`. **Verified working end-to-end**
-(sandbox install 2026-11-12, 114 tools bridged) — but the UX is agent-shaped,
-not product-shaped, and breaks entirely without a live agent session.
+1. **Remote MCP** (`mcp.heygen.com`) — OAuth, loopback-redirect-only,
+   verified to be a poor fit for remote/containerised PAVE (see
+   `docs/pave-webui-paste-card-ticket-mcp.md` for the full odyssey).
+2. **v3 REST API** (`api.heygen.com`) — one API key, `X-Api-Key` header, no
+   OAuth, no redirect geometry at all.
 
-Device flow (the standard answer) is advertised in HeyGen's AS metadata but
-disabled (`unauthorized_client`). Hosted redirect URIs are refused. So the
-paste is, for now, a physical floor — productize it.
+The REST lane reduces the entire connection ritual to **one paste**:
 
 ## Proposal
 
-Add a first-class **paste-URL card** to the MCP server connection flow:
-
 ```
-┌─ Settings → MCP Servers → HeyGen ────────────────────┐
-│  HeyGen Remote MCP                    [未連接]        │
-│                                                       │
-│  ① [連接 HeyGen]  ← opens authorizeUrl in new tab     │
-│                                                       │
-│     （批准後個分頁會顯示「無法連線」—— 正常，唔使驚）   │
-│                                                       │
-│  ② 喺嗰個分頁：撳地址欄 → Ctrl+C，貼落嚟：            │
-│     ┌──────────────────────────────────────┐         │
-│     │ http://127.0.0.1:4096/oauth/callback?…│         │
-│     └──────────────────────────────────────┘         │
-│                    [ 連接 ]                           │
-└───────────────────────────────────────────────────────┘
+┌─ Settings → Integrations → HeyGen ────────────────────┐
+│  HeyGen REST API                       [未連接]        │
+│                                                        │
+│  ① 去 https://platform.heygen.com/api-keys             │
+│     開一個 API key（撳「Create new key」→ copy）        │
+│                                                        │
+│  ② 貼落嚟：                                             │
+│     ┌──────────────────────────────────────┐          │
+│     │ sk_V2_hgu_…                            │          │
+│     └──────────────────────────────────────┘          │
+│                   [ 連接 ]                             │
+│                                                        │
+│  （收費：API credits，喺 HeyGen wallet 充值）            │
+└────────────────────────────────────────────────────────┘
 ```
 
-Server side: parse `code` + `state` from the pasted URL, validate the state
-against the pending OAuth state PAVE already holds from `oauth/start`, feed
-both into the existing `/oauth/callback` handler (which does PKCE exchange +
-token store — `[verified 2026-11-12]`). No new OAuth machinery.
+Server side: store the key in PAVE's secret store (never in skill files or
+chat transcripts); verify with `GET /v3/users/me` (returns email + wallet —
+`verified 2026-11-12`); mark connected. From then on PAVE calls v3 REST
+directly.
 
 ## Acceptance criteria
 
-1. Card appears when (and only when) a pending OAuth state exists for that
-   MCP entry — no phantom boxes on unconfigured servers.
-2. Pasted URL is validated (`code` present; `state` matches pending) before
-   the Connect button enables; mismatches get a one-line reason
-   ("link expired — press ① again").
-3. Success transitions the entry to `installed` and shows the §9.8
-   known-good table equivalent (status, token keys present, tool count).
-4. Failure surfaces the upstream error text (this bridge returns full
-   `error_code`/`message`/`next_steps` — display them).
-5. Works for any loopback-only provider; nothing HeyGen-specific in the UI
-   copy beyond the provider name.
+1. Key stored server-side with the same secrecy tier as tokens (0600 /
+   secret store); never echoed after entry.
+2. Verify-on-save via `GET /v3/users/me`; surface the account email so the
+   user knows which HeyGen account they connected.
+3. Paid-call failures surface HeyGen's own error (`402 insufficient_credit`
+   with "At least N credits required" — `verified 2026-11-12`) with a
+   "top up wallet" link instead of a generic failure.
+4. Key rotatable (re-paste replaces; old key revoked by user at
+   platform.heygen.com/api-keys).
+5. Free reads (avatars, voices, templates lists) usable immediately after
+   connect, zero balance required.
 
-## Reference materials (all verified 2026-11-12)
+## Reference materials (verified 2026-11-12)
 
-- Full verified install doctrine: `johnmak101-ops/openpave-heygen-mcp` →
-  `SKILL.md` §2 (OAuth), §9.4 (both completion lanes), §9.8 (known-good state)
-- Relay endpoint spec (upgrade path that removes even the paste, plus a
-  ready-made browser extension reference implementation):
-  `docs/pave-oauth-relay-endpoint.md` + `extension/` in the same repo
-- Root-cause evidence (DCR no-op, loopback allowlist matrix, device flow
-  disabled): issue #1 milestone-0 comment + board topic 01M76YF8DG57T0TNRDFD60BZ4Y
-
-## Out of scope
-
-- Automatic relay via browser extension (separate ticket; spec + reference
-  implementation provided — ships zero-copy once the endpoint exists)
-- HeyGen-side asks (device flow, hosted redirects) — tracked upstream
+- Auth + reads + billing-gate probes: `johnmak101-ops/openpave-heygen-mcp`
+  issue #2, `evidence/VERIFICATION.md`
+- v3 endpoint surface: https://developers.heygen.com (llms.txt index)
+- The MCP-lane alternatives (OAuth paste-URL card, relay endpoint spec,
+  browser extension) remain documented in-repo for installs that must avoid
+  API keys: `SKILL.md` §9/§11, `docs/pave-oauth-relay-endpoint.md`, `extension/`

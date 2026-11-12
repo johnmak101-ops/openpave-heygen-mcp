@@ -38,9 +38,14 @@ skill_docs(skill="heygen-mcp")
 | `probe/heygen-probe.mjs` | Token-safe JSON-RPC diagnostic probe |
 | `orchestration/brief.template.md` | A/B orchestrated-install brief |
 
-## MCP-only principle
+## Two connection lanes (decision 2026-11-12)
 
-This skill never documents API keys, REST endpoints, or the `heygen` CLI. Everything runs through the hosted Remote MCP server with OAuth. Surfaces that are not on the bridge (proofreads, webhook management, streaming TTS, hyperframes) are named in `SKILL.md` so nobody hunts for phantom tools — and nothing more.
+1. **API-key lane (primary)** — paste a HeyGen API key once; PAVE calls the
+   v3 REST API directly. No OAuth geometry. Verified 2026-11-12.
+2. **MCP lane (alternative)** — the remote MCP server over OAuth, with the
+   bridge, extension, and paste-URL card fully documented and verified.
+
+See `SKILL.md` §0 for the full doctrine.
 
 ## Verification status
 

@@ -20,14 +20,24 @@ into fact.
 
 ## 0. What this skill is — and is not
 
+- Doctrine playbook for driving HeyGen from PAVE. **Two lanes, primary first
+  (decision 2026-11-12, superseding the original MCP-only scope):**
+  1. **API-key lane (primary)** — the user creates an API key at
+      `https://platform.heygen.com/api-keys` and pastes it into PAVE once;
+      PAVE stores it server-side and calls the **v3 REST API**
+      (`api.heygen.com`, `X-Api-Key` header) directly. No OAuth, no redirect,
+      no loopback geometry, no browser extension — the connection is one paste.
+      `verified 2026-11-12: auth OK, free reads OK, paid calls gate at HTTP 402
+      insufficient_credit (≥0.5 credits/video).` Billing: **wallet credits**
+      (top up at platform.heygen.com; US$10 ≈ 20 credits).
+  2. **MCP lane (alternative)** — everything below in this file: the remote
+      MCP server over OAuth, fully verified 2026-11-12 (DCR no-op, loopback
+      allowlist, bridge + extension + paste-URL card). Use when an install
+      must avoid API keys, or when PAVE's MCP bridge is the preferred surface.
+      Billing: plan credits.
 - Doctrine-only skill: entrypoint is this file plus per-area doctrine under
-  `skills/`. No local code except the committed diagnostic probe. No sandbox
-  applies — the HeyGen MCP is a remote HTTPS service; no HeyGen code runs on
-  your machine. `[verified 2026-11-12 — package layout + OAuth + 114-tool surface]`
-- **MCP-only.** This skill never documents API keys, `api.heygen.com` REST
-  paths, or the `heygen` CLI. Everything runs through the hosted Remote MCP
-  server over OAuth. If a capability is not on the bridge, it is named in
-  §11 and left there.
+  `skills/`. No local code except the committed diagnostic probe and the
+  OAuth bridge/extension utilities (MCP-lane tools).
 - The MCP token never enters a skill sandbox or process env: it is attached
   only inside the PAVE server's MCP connection manager. The probe reads it
   from `~/.pave/tokens.yaml` and never echoes it.
