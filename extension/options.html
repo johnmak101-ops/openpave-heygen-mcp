@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PAVE Connect — settings</title>
+<style>
+body{font-family:system-ui;max-width:34rem;margin:3rem auto;padding:0 1rem;color:#222}
+label{display:block;margin:1rem 0 .25rem;font-weight:600}
+input{width:100%;padding:.5rem;font-size:.95rem;box-sizing:border-box}
+button{margin-top:1rem;font-size:1rem;padding:.5rem 1rem;cursor:pointer}
+#status{margin-top:1rem;white-space:pre-wrap;color:#0a0}
+.note{color:#666;font-size:.85rem}
+</style>
+</head>
+<body>
+<h1>PAVE Connect</h1>
+<p class="note">Point the extension at the PAVE server whose WebUI you use. The
+relay posts code+state with your WebUI session cookie.</p>
+
+<label for="origin">PAVE origin (e.g. https://pave.example.com)</label>
+<input id="origin" placeholder="https://…" autocomplete="url">
+
+<label for="token">Bearer token (optional — only if your PAVE uses token auth)</label>
+<input id="token" placeholder="leave empty to use session cookie" autocomplete="off">
+
+<button id="save">Save &amp; grant access</button>
+<div id="status"></div>
+
+<script src="options.js"></script>
+</body>
+</html>
