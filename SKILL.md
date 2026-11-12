@@ -418,12 +418,32 @@ Expect `status: error` — normal pre-auth. **Never run this command twice**
 Works when the user's browser shares loopback with PAVE (same machine, or a
 port-forwarded container). Otherwise §9.4.
 
-### 9.4 Hosted / containerized instance — the bridge lane
+### 9.4 Hosted / containerized instance — three lanes
 
 The user's browser cannot reach a container's `127.0.0.1:<port>/oauth/callback`
-— that is inherent. Two sub-lanes, newest first:
+— that is inherent. Three lanes, best first:
 
-**Bridge lane (one paste, recommended).** Run the committed bridge on the
+**Hosted-browser lane (zero-paste; dry-run verified 2026-11-12).** Host a
+headless browser INSIDE the PAVE sandbox — its loopback IS PAVE, so the
+redirect completes natively and no user paste is involved at all:
+
+1. Install Playwright + headless Chromium on the host (~200 MB; system deps
+   via passwordless sudo). Verified on an ARM sandbox: real HeyGen login page
+   renders, no bot wall.
+2. `POST /capabilities/mcp/heygen/oauth/start` (PAVE holds verifier+state),
+   open the returned `authorizeUrl` in the hosted browser.
+3. Bootstrap the login ONCE per session lifetime via magic link: "Use email →
+   Send a secure magic link" in the hosted browser; user pastes the emailed
+   link into chat; agent opens it in the hosted browser. Session persists.
+4. Approve consent → redirect lands on PAVE's own `/oauth/callback` →
+   exchange completes → installed.
+
+Caveats: keep the browser + profile OUTSIDE wipe paths (`~/.pave/cache` is
+wiped — probes have been lost there twice); a logged-in profile on the box
+equals the trust boundary of `tokens.yaml`; the consent→callback leg is
+verified only at real re-auth; bot detection posture can change.
+
+**Bridge lane (one paste).** Run the committed bridge on the
 machine where the user's browser runs:
 
 ```bash
