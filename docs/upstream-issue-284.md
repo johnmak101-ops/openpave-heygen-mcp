@@ -23,7 +23,7 @@ Desktop: token-exchange regression). Reinforces the 2026-11-12 pivot: API-key
 | # | Hypothesis | Evidence for/against |
 |---|---|---|
 | 1 | Token endpoint 307-redirect kills strict clients | **Excluded** — probed live: POST /v1/oauth/token answers 400 directly, no redirect (trailing-slash variant 404s) |
-| 2 | `resource` parameter (RFC 8707) required at exchange; client omits it | Untested — our successful exchanges always sent `resource=https://mcp.heygen.com/mcp/v1`. Needs one consent round: exchange a fresh code WITHOUT `resource` and observe |
+| 2 | `resource` parameter (RFC 8707) required at exchange; client omits it | **EXCLUDED 2026-11-12** — live test: exchange WITHOUT `resource` returned HTTP 200 with a full token set. The parameter is accepted but not required. |
 | 3 | `redirect_uri` mismatch — client's exact redirect string differs from authorize step (e.g. trailing slash, port) | Plausible; HeyGen validated the literal string at authorize time (shared client + oracle-verified allowlist) |
 | 4 | Client sends JSON body instead of form-encoded | Untested; endpoint speaks form-encoded OAuth standard |
 | 5 | Returned scope normalization (`openid` regardless of request) trips strict scope validation in the client | Weak but cheap to rule out |
