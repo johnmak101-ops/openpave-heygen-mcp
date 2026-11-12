@@ -55,8 +55,9 @@ below. SKILL.md §10 describes this flow. You are the B half of it.
    plan pick ("Pick a plan for HeyGen MCP" — billing consent, NEVER
    auto-pick; `finish` takes the user's choice as its argument). If the
    callback reads "Invalid or expired state token", the oauth/start state
-   (~35 min) died: new `oauth/start`, rewrite `authorize.url`, redo only
-   consent/finish — the profile login survives.
+   (~13 min on this host; ~35 observed elsewhere) died: new `oauth/start`,
+   rewrite `authorize.url`, then run ONE `finish '<plan>'` immediately —
+   the profile login survives.
 8. Send long URLs to A inside the INSTALL-QUESTION. A shows them per §9.5
    as a clickable markdown link. You present nothing to the user.
 9. If the send to `<A_ID>` fails with ghost: post a dead letter to the

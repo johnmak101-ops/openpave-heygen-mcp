@@ -45,9 +45,10 @@ skill_docs(skill="heygen-mcp")
    v3 REST API directly. No OAuth geometry. Verified 2026-11-12.
 2. **MCP lane (alternative)** — the remote MCP server over OAuth. Consent is
    driven by `tools/oauth-stepper.mjs` in a hosted Playwright browser
-   (headed under Xvfb — headless is Turnstile-flagged), verified end to end
-   2026-11-12 with a single user paste (the magic-link URL). Bridge and
-   paste-URL relay lanes remain as fallbacks.
+   (headed under Xvfb — headless is Turnstile-flagged; on some hosts the
+   widget is interactive, not invisible), verified end to end 2026-11-12
+   with a single user paste (the magic-link URL). Bridge and paste-URL
+   relay lanes remain as fallbacks.
 
 See `SKILL.md` §0 for the full doctrine and §9.4 for the lane runbooks.
 

@@ -21,7 +21,13 @@ else is confirmation or new operational facts.
 `chrome-headless-shell` is detected by Cloudflare Turnstile on HeyGen auth →
 `403 POST api2.heygen.com/v1/pacific/account/magic_link` with UI error
 "flagged for suspicious activity". Full Chromium 158 (1254 build) **headed
-under Xvfb** passes Turnstile invisibly (no checkbox needed).
+under Xvfb** passed Turnstile invisibly on that host (no checkbox needed).
+
+> **Correction 2026-11-12 (renewal lane):** headed is not enough on every
+> host — the widget can render interactively and the email button then hangs
+> at "Sending…" with no POST. Solve it via the shadow-root widget located
+> with `frameElement()` geometry (`SKILL.md` §2). State lifetime there was
+> ~13 min, so run the consent tail as one `finish` invocation.
 
 Canonical command for every browser step:
 
