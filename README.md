@@ -2,7 +2,7 @@
 
 **Doctrine playbook for the HeyGen Remote MCP server** (`https://mcp.heygen.com/mcp/v1/`, bridged in PAVE as `mcp_heygen_*` tools).
 
-This is a doctrine-only skill: it ships no local CLI and no API-key path. Its payload is `SKILL.md` plus per-product-area doctrine under `skills/` — verified operational knowledge for the HeyGen MCP bridge, a committed diagnostic probe (`probe/heygen-probe.mjs`) for dumping live tool schemas and reading real server errors the bridge swallows, and an orchestration brief (`orchestration/brief.template.md`) for A/B session installs.
+This is a doctrine-first skill: its payload is `SKILL.md` plus per-product-area doctrine under `skills/` — verified operational knowledge for the HeyGen MCP bridge — with three committed tools: a diagnostic probe (`probe/heygen-probe.mjs`) for dumping live tool schemas and reading real server errors, an OAuth stepper (`tools/oauth-stepper.mjs`) that drives the hosted-browser consent lane, and an orchestration brief (`orchestration/brief.template.md`) for A/B session installs.
 
 ## Install
 
@@ -36,16 +36,20 @@ skill_docs(skill="heygen-mcp")
 | `skills/heygen-batches/` | Video / translation / lipsync batch operations |
 | `skills/heygen-account/` | Account state, with hard-fenced subscription tools |
 | `probe/heygen-probe.mjs` | Token-safe JSON-RPC diagnostic probe |
+| `tools/oauth-stepper.mjs` | Playwright driver for the hosted-browser OAuth lane (login → magic link → consent → plan pick → callback); refuses headless runs |
 | `orchestration/brief.template.md` | A/B orchestrated-install brief |
 
 ## Two connection lanes (decision 2026-11-12)
 
 1. **API-key lane (primary)** — paste a HeyGen API key once; PAVE calls the
    v3 REST API directly. No OAuth geometry. Verified 2026-11-12.
-2. **MCP lane (alternative)** — the remote MCP server over OAuth, with the
-   bridge, extension, and paste-URL card fully documented and verified.
+2. **MCP lane (alternative)** — the remote MCP server over OAuth. Consent is
+   driven by `tools/oauth-stepper.mjs` in a hosted Playwright browser
+   (headed under Xvfb — headless is Turnstile-flagged), verified end to end
+   2026-11-12 with a single user paste (the magic-link URL). Bridge and
+   paste-URL relay lanes remain as fallbacks.
 
-See `SKILL.md` §0 for the full doctrine.
+See `SKILL.md` §0 for the full doctrine and §9.4 for the lane runbooks.
 
 ## Verification status
 

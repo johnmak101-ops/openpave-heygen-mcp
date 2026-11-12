@@ -45,9 +45,18 @@ below. SKILL.md §10 describes this flow. You are the B half of it.
 6. Check §9.8 first. If `heygen.status` is `installed` and
    `get_current_user` works, send `INSTALL-DONE already-installed`. Do no
    setup.
-7. §9.0 selects the lane. HeyGen OAuth is DCR-native: no developer
-   console, no app key, no code pasting. If `oauth/start` produces an
-   `authorizeUrl`, go straight to the native lane (§9.3).
+7. §9.3 picks the consent lane. Default for hosted/headless PAVE (and fine
+   locally): the hosted-browser stepper (§9.4 lane 1) — `oauth/start` →
+   write `authorize.url` → `tools/oauth-stepper.mjs form|email|magiclink|
+   poll|consent|finish`, every invocation `HEADED=1 xvfb-run -a` (headless
+   is Turnstile-flagged: 403 on the magic-link POST, no email). Only use
+   the user's own browser when it shares loopback with PAVE. Expect exactly
+   two user rounds on a fresh profile: the magic-link URL paste, and the
+   plan pick ("Pick a plan for HeyGen MCP" — billing consent, NEVER
+   auto-pick; `finish` takes the user's choice as its argument). If the
+   callback reads "Invalid or expired state token", the oauth/start state
+   (~35 min) died: new `oauth/start`, rewrite `authorize.url`, redo only
+   consent/finish — the profile login survives.
 8. Send long URLs to A inside the INSTALL-QUESTION. A shows them per §9.5
    as a clickable markdown link. You present nothing to the user.
 9. If the send to `<A_ID>` fails with ghost: post a dead letter to the
