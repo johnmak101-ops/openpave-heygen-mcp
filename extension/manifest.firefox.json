@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "PAVE Connect — loopback OAuth relay",
+  "version": "0.1.0",
+  "description": "Catches OAuth loopback redirects that die on your machine (connection refused on 127.0.0.1) and relays code+state to your PAVE server. Removes the copy-paste step for loopback-only MCP providers such as HeyGen.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "pave-connect@pave.example.com",
+      "strict_min_version": "121.0"
+    }
+  },
+  "permissions": ["webNavigation", "storage", "tabs"],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "options_page": "options.html"
+}

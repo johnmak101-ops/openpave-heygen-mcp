@@ -33,6 +33,19 @@ extension is the upgrade path that removes even that.
 | Auth to PAVE | Session cookie or bearer token in options | Session cookie only (user is signed in to WebUI) |
 | Relay endpoint | Does not exist — extension falls back to copy-page | `POST /api/mcp/oauth-relay` per `../docs/pave-oauth-relay-endpoint.md` |
 
+## Browser support
+
+| Browser | Manifest | Build | Status |
+|---|---|---|---|
+| Chrome / Edge / Opera | `manifest.json` (MV3 service worker) | `node tools/build-extensions.mjs` → `dist/chrome` | Implemented; tested path |
+| Firefox | `manifest.firefox.json` (MV3 background scripts + gecko id) | same → `dist/firefox` | Implemented; **not yet tested** (no Firefox on the build machine) |
+| Safari | `manifest.safari.json` (same as Chrome; `safari-web-extension-converter` on macOS generates the app wrapper) | same → `dist/safari` | **Cannot build/sign on Windows** — requires macOS + Xcode; code is Safari-compatible as-is |
+
+Cross-browser compatibility notes: all APIs used (`webNavigation`,
+`storage`, `tabs`, `permissions.request`, `runtime.getURL`) are available in
+the `chrome.*` namespace on all three engines. The only per-browser delta is
+the background declaration (service worker vs scripts) and the gecko id.
+
 ## Files
 
 - `manifest.json` — MV3; host permissions limited to `http://127.0.0.1/*` and
