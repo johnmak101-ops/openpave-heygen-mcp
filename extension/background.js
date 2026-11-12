@@ -26,9 +26,21 @@ const LOOPBACK_FILTER = {
 // ---------------------------------------------------------------------------
 const DEFAULT_ORIGIN = ''; // e.g. 'https://pave.example.com'
 
+let cachedPkgOrigin = null;
+async function pkgOrigin() {
+  if (cachedPkgOrigin !== null) return cachedPkgOrigin;
+  try {
+    const r = await fetch(chrome.runtime.getURL('config.json'));
+    cachedPkgOrigin = ((await r.json()).defaultOrigin || '').replace(/\/+$/, '');
+  } catch (e) {
+    cachedPkgOrigin = '';
+  }
+  return cachedPkgOrigin;
+}
+
 async function getConfig() {
   const { origin, token } = await chrome.storage.local.get(['origin', 'token']);
-  const o = (origin ?? DEFAULT_ORIGIN).replace(/\/+$/, '');
+  const o = (origin ?? (await pkgOrigin()) ?? DEFAULT_ORIGIN).replace(/\/+$/, '');
   return { origin: o, token: token || '' };
 }
 
