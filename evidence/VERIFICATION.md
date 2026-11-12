@@ -121,3 +121,19 @@ handoff (`internal_widget_event` class), NOT cloud-agent OAuth. Every
 hypothesis for a no-paste cloud path (device flow, hosted redirects,
 handoff scope) is now empirically closed; paste-back or API-key lanes are
 the complete answer set.
+
+---
+
+# Hosted-browser lane — login bootstrap COMPLETE (2026-11-12 ~07:46, sandbox)
+
+- Persistent HeyGen web login banked at /home/pave/heygen-browser/profile
+  ("Welcome, John"), verified across a fresh browser process; screenshot
+  proofs on the host.
+- Key finding: chrome-headless-shell is Turnstile-detected (403 on magic-link
+  POST); full Chromium headed under Xvfb passes invisibly. Canonical driver:
+  driver.mjs status|sendlink|openlink via xvfb-run.
+- Magic-link single-use protocol learned live: one send only (resends
+  invalidate), never click (first browser wins), corporate gateways may
+  pre-fetch and burn links, consumed links auto-trigger a replacement email.
+- Renewal ladder (first expiry ~2026-11-22): capabilities_refresh →
+  oauth/result check → consent in banked browser → magic-link re-bootstrap.
