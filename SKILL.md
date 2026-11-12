@@ -504,7 +504,10 @@ magic link + consent + plan pick → callback `Connected!` → tokens stored →
    numbered screenshot):**
 
    ```bash
-   cd <repo> && export HEYGEN_OAUTH_DIR=~/heygen-oauth   # holds authorize.url
+   # one-time: the driver ships in the skill's source repo (the PAVE skill
+   # store carries only SKILL.md files) — clone it, run every step from root:
+   git clone --depth 1 https://github.com/johnmak101-ops/openpave-heygen-mcp
+   cd openpave-heygen-mcp && export HEYGEN_OAUTH_DIR=~/heygen-oauth  # holds authorize.url
    HEADED=1 xvfb-run -a node tools/oauth-stepper.mjs form          # → "Use email" clicked
    # …ask the user for the account email if unknown…
    HEADED=1 xvfb-run -a node tools/oauth-stepper.mjs email '<addr>' # NET 200 …/magic_link
