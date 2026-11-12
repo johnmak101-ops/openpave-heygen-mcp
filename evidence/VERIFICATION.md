@@ -55,3 +55,20 @@ polling — retried fine; renders were unaffected.
   an 11.5 s rendered Video Agent MP4). The US$10 budget was not needed.
 - Refresh token held locally (mode 0600) for re-verification after the
   10-day access-token expiry (SKILL.md §7.3).
+
+---
+
+# M5 — end-to-end in PAVE sandbox: PASS (2026-11-12 04:16 UTC)
+
+Sandbox session `01M76WFEXEWWYYW6FK560X8MHM` completed the install via the
+native relay lane (§9.4):
+
+1. `pave install johnmak101-ops/openpave-heygen-mcp` → heygen-mcp@0.1.0 at `~/.pave/skills/heygen-mcp`
+2. `capabilities_add https://mcp.heygen.com/mcp/v1` → `pending_oauth`, auth.type oauth2, `mcp:heygen` granted (R10 enum trap does NOT reproduce on this bridge — answers SKILL.md §7.1)
+3. PAVE `oauth/start` (verifier held by PAVE) → user approved → pasted dead-loopback address-bar URL → agent relayed verbatim into PAVE's own `/oauth/callback` → PAVE did the PKCE exchange and stored tokens itself
+4. `mcp:heygen [installed]`, `tokens.yaml` mode 0600 with `MCP__heygen__ACCESS` + `MCP__heygen__REFRESH`
+5. `tool_search "heygen"` → 114 `mcp_heygen_*` tools; `mcp_heygen_get_current_user` returned john.mak@candrholdings.com / free plan — through the bridge, not the probe
+
+**Both §9.4 lanes are now production-verified** (bridge lane on the laptop
+2026-11-12; native relay lane in the sandbox 2026-11-12). Epic complete:
+M0–M6 all pass. Total spend US$0 of the US$10 budget.
