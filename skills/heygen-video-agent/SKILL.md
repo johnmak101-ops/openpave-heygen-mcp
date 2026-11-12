@@ -94,5 +94,7 @@ kept); `get_video_agent_resource` fetches a specific session resource by id.
 `get_video_agent_resource`, `list_video_agent_styles`.
 
 Verification ledger: pipeline doctrine `[official]`; tool schemas
-`[bridge snapshot 2026-11-12]`; live generation `[unverified — pending M4
-spend]`.
+`[bridge snapshot 2026-11-12]`; **live generation `[verified 2026-11-12]` —
+one-shot `generate` mode produced an 11.5 s MP4 in ~19 min on a free plan,
+delivered as a presigned URL (~7-day expiry) via `get_video`; polling saw one
+transient HTTP 502 from the bridge, harmless on retry.**

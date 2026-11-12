@@ -18,7 +18,17 @@ Method: committed probe (`probe/heygen-probe.mjs`) with a dev token file
 | 10 | `create_prompt_avatar` | ✅ verified | free (accepted on free plan) | group_id == look_id for prompt avatars; preview null → ready in ~90 s |
 | 11 | `list_avatar_looks` | ✅ verified | free | resolves looks from group |
 | 12 | `get_avatar_creation_status` | ✅ verified | free | **semantic quirk**: returns "No avatar creation is in progress" when idle — it tracks the guided creation flow, not look rendering. Use `list_avatar_looks` preview state for readiness |
-| 13 | `create_video_agent` | ✅ submitted | pending | session `843f64bd…`, video `b2df9500…`, status `generating`; result recorded below when complete |
+| 13 | `create_video_agent` | ✅ **verified** | free (plan still `free`, no meter) | session `843f64bd…` → `completed` in ~19 min; **11.5 s MP4** `video_url` delivered via `get_video`; thinking→generating(81→97)→completed |
+
+## Headline result — 2026-11-12
+
+**Full generate chain verified on a free plan for US$0:**
+prompt avatar (`create_prompt_avatar`) → readiness via `list_avatar_looks`
+(~90 s) → public voice (`list_voices`) → `create_video_agent` (mode
+`generate`, camelCase `avatarId`/`voiceId`/`orientation`) → poll
+`get_video_agent_session` → `get_video` → working presigned MP4 URL
+(11.5 s, ~7-day expiry). One transient HTTP 502 from the bridge during
+polling — retried fine; renders were unaffected.
 
 ## Runbook lessons folded into doctrine (all verified 2026-11-12)
 
@@ -39,7 +49,9 @@ Method: committed probe (`probe/heygen-probe.mjs`) with a dev token file
 
 ## Spend tracker
 
-- Free-tier verifications above: **US$0 spent** (credits not metered on this
-  plan — `get_current_user` returns `remaining: null`).
-- Video Agent job #13: first potential charge; result + any plan gate
-  recorded when polling completes.
+- **Total verification spend: US$0.** All 13 verified tools ran on the free
+  plan; the account's credit meter reads `remaining: null` throughout and
+  the plan stayed `free` after the full video-generation chain (including
+  an 11.5 s rendered Video Agent MP4). The US$10 budget was not needed.
+- Refresh token held locally (mode 0600) for re-verification after the
+  10-day access-token expiry (SKILL.md §7.3).
