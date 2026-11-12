@@ -64,11 +64,13 @@ subject approves in a browser within 24 h (one submission).
 
 ## Readiness gate (BLOCKING before any video)
 
-`get_avatar_creation_status` / `get_avatar_group` / `get_avatar_look` —
-confirm the look (and its `preview_image_url`) exists and training is not
-failed before handing the avatar to a video skill. Poll at 30 s intervals;
+Use `list_avatar_looks(group_id=...)`: the look is ready when
+`preview_image_url` is non-null (prompt avatars go null → ready in ~90 s;
+poll every 30 s). **Quirk, verified 2026-11-12:** `get_avatar_creation_status`
+answers "No avatar creation is in progress" once idle — it tracks the guided
+creation flow, not look rendering, so it cannot confirm readiness. And
 **never re-create to check progress** — repeating creation makes duplicate
-work and can burn training quota. `[web — official doctrine]`
+work and can burn training quota. `[verified 2026-11-12]`
 
 ## Iteration
 

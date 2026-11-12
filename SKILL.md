@@ -227,18 +227,49 @@ waiting or hand off — do not spin silently, and never re-submit to "check".
 Media import is one MCP call, one `curl` to Amazon S3, one MCP call:
 
 ```bash
-# 1. MCP: create_asset_upload(filename="clip.mp4", content_type="video/mp4")
-#    → { asset_id, upload_url, headers }   (presigned S3 URL)
-# 2. Shell: curl -X PUT -H "<returned headers>" --data-binary @clip.mp4 "<upload_url>"
+# 1. MCP: create_asset_upload(filename="clip.mp4", contentType="video/mp4",
+#                             sizeBytes=1234567)
+#    → { asset_id, upload_url, upload_headers }   (presigned S3 URL)
+# 2. Shell: curl -X PUT -H "<each upload_headers entry>" --data-binary @clip.mp4 "<upload_url>"
 # 3. MCP: complete_asset_upload(asset_id)  → asset finalized (idempotent)
 ```
 
-The `curl` targets the presigned S3 URL from step 1 — it never touches
-HeyGen's API, so it does not violate the MCP-only principle. Batch variant:
-`create_asset_upload_batch` (up to 100 files) → PUT each →
-`complete_asset_batch`. `[web — tool descriptions; S3 presigned shape]`
+`[verified 2026-11-12 — full runbook executed: 70-byte PNG → S3 HTTP 200 →
+complete → get_asset]`
 
-### 4.5 Stringified payloads
+Field facts learned live (docs omit all of these):
+
+- `contentType` and `sizeBytes` are **required** and **camelCase**; the
+  validation error names them snake_case — read the schema, not the error.
+- The response field is `upload_headers` (not `headers`); apply each entry
+  verbatim to the PUT.
+- **Media MIME types only** — `text/plain` is refused
+  (`invalid_parameter`). Use image/video/audio types.
+- The PUT target is Amazon S3 (`*.s3-accelerate.amazonaws.com`) — it never
+  touches HeyGen's API, so it does not violate the MCP-only principle.
+  Batch variant: `create_asset_upload_batch` (up to 100 files) → PUT each →
+  `complete_asset_batch`.
+
+### 4.5 Per-tool field naming — schema before first call
+
+Parameter casing is **inconsistent across tools** and the validation errors
+name fields differently from the schema (`contentType` in the schema,
+`content_type` in the error). Before the first call to any tool, dump its
+schema (`node probe/heygen-probe.mjs schema <tool>`) and use the schema's
+exact property names. Verified examples 2026-11-12: `create_asset_upload`
+wants `contentType`/`sizeBytes`; `create_video_agent` wants `avatarId`/
+`voiceId`/`styleId`/`orientation` (only `prompt` required); `list_voices`
+takes plain `type`/`language`/`limit`. `[verified 2026-11-12]`
+
+### 4.6 Bridge error surfacing (good news)
+
+This bridge does **not** swallow error text. Failures arrive in
+`structuredContent` with `message`, `error_code`, `status_code`, a `doc_url`,
+and `next_steps`; validation errors name the exact missing field. The
+wrike-style bare-`isError` defect does not reproduce here (§7.2 closed).
+`[verified 2026-11-12]`
+
+### 4.7 Stringified payloads
 
 Bridge results arrive as raw JSON **strings** inside MCP text content —
 parse the text, do not expect pretty objects. `[verified 2026-11-12 —
@@ -282,7 +313,9 @@ rules. `[verified 2026-11-12 — probe ran live: 114 tools + get_current_user]`
 
 1. Does the R10 `permission`-tool enum trap reproduce on this bridge?
    `[untested — dropbox coerced three calls 2026-11-06]`
-2. Does the bridge swallow error text like wrike's did? `[untested]`
+2. Does the bridge swallow error text like wrike's did? **Closed
+   2026-11-12 — NO.** Errors arrive with full `message`/`error_code`/
+   `next_steps` in `structuredContent` (§4.6).
 3. Does PAVE's unattended refresh survive the 10-day access-token expiry?
    `[untested — first token issued 2026-11-12]`
 4. Multi-skill discovery: this repo ships one skill (`heygen-mcp`) whose
