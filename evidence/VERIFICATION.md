@@ -72,3 +72,21 @@ native relay lane (§9.4):
 **Both §9.4 lanes are now production-verified** (bridge lane on the laptop
 2026-11-12; native relay lane in the sandbox 2026-11-12). Epic complete:
 M0–M6 all pass. Total spend US$0 of the US$10 budget.
+
+---
+
+# PAVE Connect extension — live test (2026-11-12, Chrome, unpacked)
+
+- **Tab capture: PASS.** Approve → loopback tab dies (ERR_CONNECTION_REFUSED)
+  → `webNavigation.onErrorOccurred` fired → tab redirected to the extension
+  page (fallback copy-page when no origin configured — user copied with one
+  button).
+- **Relay path: PASS.** Origin `http://127.0.0.1:49200` (mock relay) →
+  extension POSTed `{code, state, callback_url}` → mock answered
+  `200 {installed:true}` → tab rendered "Connected ✓". Mock log captured the
+  full round trip; observed double-fire (two codes, same state, 10 s apart) —
+  endpoint spec updated with idempotent-state guidance.
+- **Fallback preservation: PASS.** With no origin, the same capture shows the
+  copy page — the manual paste-URL lane survives as the floor.
+- Firefox manifest provided (untested — no Firefox on the build machine);
+  Safari path requires macOS/Xcode to package (code is Safari-compatible).

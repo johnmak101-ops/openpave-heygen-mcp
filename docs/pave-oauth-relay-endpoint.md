@@ -39,9 +39,19 @@ X-PAVE-Relay: 1                      # CSRF canary — reject without it
 {"installed": true, "provider": "heygen", "entry_id": "heygen"}
 ```
 
-Errors: `400 invalid_code` (exchange refused, include upstream error text),
-`401 unauthenticated`, `409 no_pending_state`, `429` rate-limited
-(max 5 attempts / state; codes are single-use anyway).
+Errors: `400 invalid_code` (exchange refused, include upstream error text —
+codes are single-use, so a duplicate relay of the same code lands here and
+must not be treated as a server fault), `401 unauthenticated`,
+`409 no_pending_state`, `429` rate-limited (max 5 attempts / state).
+
+## Observed client behaviour (live test 2026-11-12)
+
+The MV3 client can fire the relay more than once for one approval (two
+distinct codes for the same state arrived 10 s apart in testing — likely a
+double navigation/approval retry). The endpoint should therefore treat
+"state already consumed" as a success-path lookup: if the entry is already
+`installed` for that state, answer `200 {installed:true, provider, already:true}`
+instead of an exchange attempt.
 
 ## Why this shape
 
